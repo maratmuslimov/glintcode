@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { detect } from "../src/detect";
-import { decodeCells, encodeCells, payloadFromNumber, payloadToNumber } from "../src/format";
+import { decodeCells, encodeCells, payloadFromNumber, payloadToNumber } from "../src/capsule-format";
 import { pose, render } from "./raster";
 
 test("cells round-trip for many payloads", () => {

@@ -1,7 +1,7 @@
 // A tiny software rasterizer for tests: draws a capsule layout through a projective map, with
 // supersampling, blur-free. Good enough to exercise the reader without a browser.
-import { capsuleLayout, type CapsuleOptions } from "../src/render";
-import { DISC_R, GLYPH_R, MARK } from "../src/format";
+import { capsuleLayout, type CapsuleOptions } from "../src/capsule-render";
+import { DISC_R, GLYPH_R, MARK } from "../src/capsule-format";
 
 export type Mat3 = number[]; // row-major 3x3, image = M · code
 

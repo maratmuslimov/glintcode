@@ -1,10 +1,12 @@
-// Stress test on real renders: Chromium draws capsuleSvg() with CSS 3D tilt, blur and clutter,
+// Stress test on real renders: Chromium draws a code's SVG with CSS 3D tilt, blur and clutter,
 // screenshots it as JPEG, then noise and uneven light are added and the reader runs in Node.
-//   pnpm stress [cases=400] [seed=1]
+//   pnpm stress [cases=400] [seed=1] [format=capsule]
 import { createRequire } from "node:module";
 import { performance } from "node:perf_hooks";
 import { detect } from "../src/detect";
-import { capsuleLayout, capsuleSvg, type CapsuleOptions } from "../src/render";
+import { capsuleLayout, type CapsuleOptions } from "../src/capsule-render";
+import { codeSvg, type Format } from "../src/index";
+import type { RadialOptions } from "../src/radial";
 
 const require = createRequire(import.meta.url);
 // Playwright comes with the machine (pre-installed browser), not with this package.
@@ -12,6 +14,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require("playwright") as { chromium: any };
 
 const CASES = Number(process.argv[2] ?? 400);
+const FORMAT = (process.argv[4] ?? "capsule") as Format;
 let seed = Number(process.argv[3] ?? 1);
 const rnd = () => {
   seed ^= seed << 13;
@@ -27,14 +30,24 @@ const pick = <T,>(xs: T[]) => xs[Math.floor(rnd() * xs.length)];
 const W = 960;
 const H = 720;
 
-const STYLES: { name: string; opts: CapsuleOptions; bg: string }[] = [
-  { name: "pill", opts: {}, bg: "#f4f4f2" },
-  { name: "pill+label", opts: { label: { title: "Maison", subtitle: "Стол 12 · меню" } }, bg: "#ffffff" },
-  { name: "inverted", opts: { pill: "#ffffff", marks: "#111111" }, bg: "#151515" },
-  { name: "bare", opts: { style: "bare", label: "Café Sol" }, bg: "#ffffff" },
-  { name: "brand", opts: { pill: "#4b58e6", label: "loyalty card" }, bg: "#eef0ff" },
-  { name: "rows", opts: { pill: "#1d1d1f", rows: ["#ffffff", "#f1c9a8", "#e59a6b", "#ffb36b"], label: "Ticket 20931" }, bg: "#faf7f2" },
-];
+const STYLES: { name: string; opts: CapsuleOptions & RadialOptions; bg: string }[] =
+  FORMAT === "capsule"
+    ? [
+        { name: "pill", opts: {}, bg: "#f4f4f2" },
+        { name: "pill+label", opts: { label: { title: "Maison", subtitle: "Стол 12 · меню" } }, bg: "#ffffff" },
+        { name: "inverted", opts: { pill: "#ffffff", marks: "#111111" }, bg: "#151515" },
+        { name: "bare", opts: { style: "bare", label: "Café Sol" }, bg: "#ffffff" },
+        { name: "brand", opts: { pill: "#4b58e6", label: "loyalty card" }, bg: "#eef0ff" },
+        { name: "rows", opts: { pill: "#1d1d1f", rows: ["#ffffff", "#f1c9a8", "#e59a6b", "#ffb36b"], label: "Ticket 20931" }, bg: "#faf7f2" },
+      ]
+    : [
+        { name: "ink", opts: {}, bg: "#f4f4f2" },
+        { name: "inverted", opts: { ink: "#ffffff", paper: "#151515" }, bg: "#151515" },
+        { name: "rings", opts: { lens: "#16171c", rings: ["#2f37a8", "#4b58e6", "#6877ff", "#8a7dff"] }, bg: "#ffffff" },
+        { name: "warm+logo", opts: { ink: "#2b241c", paper: "#f4efe7", lens: "#7a2e1d", logo: { svg: '<text x="0" y="0.38" text-anchor="middle" font-family="Georgia" font-style="italic" font-size="1.15" fill="#f4efe7">M</text>' } }, bg: "#f4efe7" },
+        { name: "caption", opts: { caption: "Наведите камеру" }, bg: "#ffffff" },
+      ];
+
 
 const CLUTTER = `
   <div style="position:absolute;left:20px;top:16px;font:600 28px system-ui;color:#333">Наш сезонный ужин · Season dinner</div>
@@ -63,7 +76,7 @@ function makeCase(): Case {
   return {
     style: pick(STYLES),
     value: Math.floor(rnd() * 2 ** 48),
-    height: Math.round(between(22, 160)),
+    height: Math.round(FORMAT === "capsule" ? between(22, 160) : between(40, 300)),
     rz: between(0, 360),
     rx: between(-55, 55),
     ry: between(-45, 45),
@@ -120,10 +133,16 @@ async function main() {
 
   for (let i = 0; i < CASES; i++) {
     const c = makeCase();
-    // Keep the whole code in frame at any rotation: its length stays under 90% of the short side.
-    const vb = capsuleLayout(c.value, c.style.opts).viewBox;
-    c.height = Math.min(c.height, Math.floor((0.9 * Math.min(W, H) * 2) / vb.width));
-    const svg = capsuleSvg(c.value, { ...c.style.opts, height: c.height });
+    let svg: string;
+    if (FORMAT === "capsule") {
+      // Keep the whole code in frame at any rotation: its length stays under 90% of the short side.
+      const vb = capsuleLayout(c.value, c.style.opts).viewBox;
+      c.height = Math.min(c.height, Math.floor((0.9 * Math.min(W, H) * 2) / vb.width));
+      svg = codeSvg("capsule", c.value, { ...c.style.opts, height: c.height });
+    } else {
+      // Round codes: c.height is the diameter.
+      svg = codeSvg(FORMAT, c.value, { ...c.style.opts, size: c.height });
+    }
     await page.setContent(`<!doctype html><html><body style="margin:0;width:${W}px;height:${H}px;background:${c.style.bg};overflow:hidden;position:relative">
       ${CLUTTER}
       <div style="position:absolute;left:${c.x * W}px;top:${c.y * H}px;perspective:${between(650, 1600)}px">
@@ -135,18 +154,20 @@ async function main() {
       `(${NOISE})(${JSON.stringify({ src: `data:image/jpeg;base64,${jpeg.toString("base64")}`, noise: c.noise, light: c.light, seed: i + 1 })})`,
     )) as string;
     const data = new Uint8Array(Buffer.from(b64, "base64"));
+    // DUMP=<file> ONLY=<i>: save that frame's final RGBA (width, height, then pixels) for debugging.
+    if (process.env.DUMP && Number(process.env.ONLY) === i) require("node:fs").writeFileSync(process.env.DUMP, Buffer.concat([Buffer.from(new Uint32Array([W, H]).buffer), Buffer.from(data)]));
 
-    if (process.env.DUMP && Number(process.env.ONLY) === i) require("node:fs").writeFileSync(process.env.DUMP, jpeg);
     const t0 = performance.now();
     const found = detect({ data, width: W, height: H });
     times.push(performance.now() - t0);
 
-    const ok = found.some((f) => f.value === c.value);
-    if (found.some((f) => f.value !== c.value)) wrong++;
+    const ok = found.some((f) => f.value === c.value && f.format === FORMAT);
+    if (found.some((f) => f.value !== c.value || f.format !== FORMAT)) wrong++;
     const tilt = Math.max(Math.abs(c.rx), Math.abs(c.ry));
     bump("all", ok);
     bump(`style ${c.style.name}`, ok);
-    bump(`height ${c.height < 32 ? "22-31" : c.height < 48 ? "32-47" : c.height < 80 ? "48-79" : "80-160"}px`, ok);
+    if (FORMAT === "capsule") bump(`height ${c.height < 32 ? "22-31" : c.height < 48 ? "32-47" : c.height < 80 ? "48-79" : "80-160"}px`, ok);
+    else bump(`size ${c.height < 60 ? "40-59" : c.height < 100 ? "60-99" : c.height < 180 ? "100-179" : "180-300"}px`, ok);
     bump(`tilt ${tilt < 20 ? "0-19" : tilt < 35 ? "20-34" : tilt < 45 ? "35-44" : "45-55"}°`, ok);
     bump(`blur ${c.blur === 0 ? "none" : c.blur < 0.8 ? "<0.8px" : "0.8-1.6px"}`, ok);
     if (!ok) failures.push(`#${i} ${c.style.name} h=${c.height} rx=${c.rx.toFixed(0)} ry=${c.ry.toFixed(0)} blur=${c.blur.toFixed(1)} noise=${c.noise.toFixed(0)} q=${c.quality}`);
@@ -154,7 +175,7 @@ async function main() {
   await browser.close();
 
   times.sort((a, b) => a - b);
-  console.log(`\n${CASES} frames ${W}×${H}`);
+  console.log(`\n${FORMAT}: ${CASES} frames ${W}×${H}`);
   for (const [k, s] of [...stats].sort()) console.log(`${k.padEnd(18)} ${String(s.ok).padStart(4)}/${String(s.n).padEnd(4)} ${((100 * s.ok) / s.n).toFixed(1)}%`);
   console.log(`wrong payloads    ${wrong}`);
   console.log(`time per frame    median ${times[times.length >> 1].toFixed(1)} ms, p90 ${times[Math.floor(times.length * 0.9)].toFixed(1)} ms`);

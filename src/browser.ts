@@ -1,4 +1,5 @@
-import { detect, type Detection, type DetectOptions } from "./detect";
+import { detect } from "./detect";
+import type { Detection, DetectOptions } from "./types";
 
 /** Pixels of anything a canvas can draw (image, bitmap, video frame, canvas), downscaled to `maxDimension`. */
 function pixels(source: CanvasImageSource, maxDimension: number, canvas?: HTMLCanvasElement) {

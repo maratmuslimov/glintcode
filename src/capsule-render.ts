@@ -10,7 +10,7 @@ import {
   ROWS,
   START_X,
   type Payload,
-} from "./format";
+} from "./capsule-format";
 
 export type Label = string | { title: string; subtitle?: string };
 
