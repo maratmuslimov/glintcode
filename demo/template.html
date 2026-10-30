@@ -46,6 +46,16 @@ section { display: flex; flex-direction: column; gap: 20px; }
 
 .stage { border-radius: 28px; padding: clamp(24px, 6vw, 64px); display: grid; place-items: center; min-height: 260px; transition: background .25s; }
 .stage svg { width: 100%; max-width: 860px; height: auto; display: block; }
+.stage.round svg { max-width: 340px; }
+body.round .capsule-only { display: none; }
+.gallery { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.gallery button { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.gallery .face { background: #fff; border-radius: 18px; aspect-ratio: 1; padding: 12%; display: grid; place-items: center; border: 1px solid var(--line); }
+.gallery .face svg { width: 100%; height: auto; display: block; }
+.gallery button[aria-pressed="true"] .face { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.gallery button:focus-visible .face { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gallery b { font: 500 14px var(--font-display); }
+.gallery span { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 .controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -118,6 +128,7 @@ td.num { text-align: right; }
   .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .thumbs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .variants { grid-template-columns: minmax(0, 1fr); }
+  .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (prefers-reduced-motion: reduce) { .stage, .bar i { transition: none; } }
 </style>
@@ -125,15 +136,16 @@ td.num { text-align: right; }
 <main>
   <header class="head">
     <span class="eyebrow">Свой визуальный код · рабочий прототип</span>
-    <h1>Capsule</h1>
-    <p class="muted">Капсула со строками точек и тире, а рядом человеческий текст. Код ниже настоящий: его рисует генератор из SDK, и его же читает считыватель на этой странице. Поменяйте текст, цвет или число и проверьте чтение фотографией или тестом прямо на вашем устройстве.</p>
+    <h1>Пять кодов, один считыватель</h1>
+    <p class="muted">Capsule с текстом и четыре круглых стиля: Orbit, Constellation, Halo и Contour. Коды ниже настоящие: их рисует генератор из SDK, и их же читает считыватель на этой странице, один на все стили. Выберите стиль, поменяйте цвет или число и проверьте чтение фотографией или тестом прямо на вашем устройстве.</p>
   </header>
 
   <section>
     <div class="stage" id="stage"></div>
+    <div class="field"><span>Стиль</span><div class="seg" id="formats"></div></div>
     <div class="controls">
-      <label class="field"><span>Название</span><input type="text" id="title" value="Maison" maxlength="28"></label>
-      <label class="field"><span>Подпись</span><input type="text" id="subtitle" value="Стол 12 · меню" maxlength="36"></label>
+      <label class="field capsule-only"><span>Название</span><input type="text" id="title" value="Maison" maxlength="28"></label>
+      <label class="field capsule-only"><span>Подпись</span><input type="text" id="subtitle" value="Стол 12 · меню" maxlength="36"></label>
       <label class="field"><span>Текст под кодом</span><input type="text" id="caption" value="" maxlength="48" placeholder="Например: Наведите камеру"></label>
       <div class="field"><span>Число внутри кода (48 бит)</span>
         <div class="idrow"><input type="text" id="value" inputmode="numeric" aria-label="Число внутри кода"><button class="btn" id="random" type="button">Случайное</button></div>
@@ -149,7 +161,16 @@ td.num { text-align: right; }
 
   <section>
     <div class="head">
-      <span class="eyebrow">Анатомия</span>
+      <span class="eyebrow">Стили</span>
+      <h2>Одно число, пять видов</h2>
+      <p class="muted">Внутри у всех одно и то же: 48 бит и коррекция ошибок Reed–Solomon. Процент под каждым кодом: сколько кадров стресс-теста прочитано с первого кадра. Нажмите на код, чтобы выбрать его выше.</p>
+    </div>
+    <div class="gallery" id="gallery"></div>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="eyebrow">Анатомия Capsule</span>
       <h2>Как его читает камера</h2>
     </div>
     <div class="anatomy" id="anatomy"></div>
@@ -227,12 +248,19 @@ td.num { text-align: right; }
   const $ = (id) => document.getElementById(id);
   const STRESS = /*STRESS*/;
 
+  const FORMATS = [
+    { id: "capsule", name: "Capsule" },
+    { id: "orbit", name: "Orbit" },
+    { id: "constellation", name: "Constellation" },
+    { id: "halo", name: "Halo" },
+    { id: "contour", name: "Contour" },
+  ];
   const PRESETS = [
-    { id: "graphite", name: "Графит", swatch: "#111111", stage: "#ffffff", opts: { pill: "#111111" } },
-    { id: "white", name: "Белая", swatch: "#ffffff", stage: "#1c1d22", opts: { pill: "#ffffff", marks: "#111111" } },
-    { id: "indigo", name: "Индиго", swatch: "#4b58e6", stage: "#eef0ff", opts: { pill: "#4b58e6" } },
-    { id: "warm", name: "Тёплая", swatch: "#e8875a", stage: "#faf6f0", opts: { pill: "#1d1d1f", rows: ["#ffffff", "#f6d7bd", "#efae84", "#e8875a"] } },
-    { id: "bare", name: "Без капсулы", swatch: "transparent", stage: "#ffffff", opts: { style: "bare" } },
+    { id: "graphite", name: "Графит", swatch: "#111111", stage: "#ffffff", opts: { pill: "#111111" }, round: {} },
+    { id: "white", name: "Белая", swatch: "#ffffff", stage: "#1c1d22", opts: { pill: "#ffffff", marks: "#111111" }, round: { ink: "#ffffff", paper: "#1c1d22" } },
+    { id: "indigo", name: "Индиго", swatch: "#4b58e6", stage: "#eef0ff", opts: { pill: "#4b58e6" }, round: { lens: "#16171c", rings: ["#2f37a8", "#3a46cc", "#4451e0", "#4b58e6"] } },
+    { id: "warm", name: "Тёплая", swatch: "#e8875a", stage: "#faf6f0", opts: { pill: "#1d1d1f", rows: ["#ffffff", "#f6d7bd", "#efae84", "#e8875a"] }, round: { ink: "#2b241c", paper: "#faf6f0", lens: "#7a2e1d" } },
+    { id: "bare", name: "Без капсулы", swatch: "transparent", stage: "#ffffff", opts: { style: "bare" }, round: null },
   ];
   const LOGOS = [
     { id: "glyph", name: "Значок" },
@@ -240,11 +268,23 @@ td.num { text-align: right; }
     { id: "none", name: "Пусто" },
   ];
 
-  const state = { preset: "graphite", logo: "glyph", value: Math.floor(Math.random() * 2 ** 48) };
+  const state = { format: "capsule", preset: "graphite", logo: "glyph", value: Math.floor(Math.random() * 2 ** 48) };
+  const isRound = () => state.format !== "capsule";
   const fmt = (v) => v.toLocaleString("ru-RU");
 
   function options(extra = {}) {
     const p = PRESETS.find((x) => x.id === state.preset);
+    if (isRound()) {
+      const o = { ...(p.round || {}) };
+      const caption = $("caption").value.trim();
+      if (caption) o.caption = caption;
+      if (state.logo === "none") o.logo = "none";
+      if (state.logo === "letter") {
+        const letter = ($("title").value.trim() || "S")[0].toUpperCase().replace(/[<&>"]/g, "");
+        o.logo = { svg: `<text x="0" y="0.38" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="1.15" fill="${o.paper || "#ffffff"}">${letter}</text>` };
+      }
+      return { ...o, ...extra };
+    }
     const title = $("title").value.trim();
     const subtitle = $("subtitle").value.trim();
     const caption = $("caption").value.trim();
@@ -263,12 +303,36 @@ td.num { text-align: right; }
 
   function render() {
     const p = PRESETS.find((x) => x.id === state.preset);
+    if (isRound() && !p.round) { state.preset = "graphite"; return render(); }
+    document.body.classList.toggle("round", isRound());
+    $("stage").classList.toggle("round", isRound());
     $("stage").style.background = p.stage;
-    $("stage").innerHTML = C.capsuleSvg(state.value, options());
+    $("stage").innerHTML = C.codeSvg(state.format, state.value, options());
     $("value").value = fmt(state.value);
+    $("formats").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === state.format)));
+    $("presets").querySelectorAll("button").forEach((b) => {
+      b.setAttribute("aria-pressed", String(b.dataset.id === state.preset));
+      b.hidden = isRound() && b.dataset.id === "bare";
+    });
+    renderGallery();
     renderAnatomy();
     renderVariants();
   }
+
+  function renderGallery() {
+    $("gallery").innerHTML = FORMATS.map((f) => {
+      const st = STRESS.formats.find((x) => x.format === f.id);
+      const svg = f.id === "capsule" ? C.codeSvg("capsule", state.value, {}) : C.codeSvg(f.id, state.value, {});
+      return `<button type="button" data-id="${f.id}" aria-pressed="${f.id === state.format}"><div class="face">${svg}</div><b>${f.name}</b><span>${st ? `${st.all.toFixed(0)}% кадров` : ""}</span></button>`;
+    }).join("");
+  }
+  $("gallery").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    state.format = b.dataset.id;
+    render();
+    $("stage").scrollIntoView({ behavior: "smooth", block: "center" });
+  });
 
   function renderVariants() {
     const v = state.value;
@@ -303,6 +367,13 @@ td.num { text-align: right; }
   }
 
   // Controls
+  $("formats").innerHTML = FORMATS.map((f) => `<button type="button" data-id="${f.id}" aria-pressed="${f.id === state.format}">${f.name}</button>`).join("");
+  $("formats").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    state.format = b.dataset.id;
+    render();
+  });
   $("presets").innerHTML = PRESETS.map((p) => `<button type="button" data-id="${p.id}" aria-pressed="${p.id === state.preset}"><span class="swatch" style="background:${p.swatch}"></span>${p.name}</button>`).join("");
   $("logos").innerHTML = LOGOS.map((l) => `<button type="button" data-id="${l.id}" aria-pressed="${l.id === state.logo}">${l.name}</button>`).join("");
   const seg = (el, key) => el.addEventListener("click", (e) => {
@@ -322,7 +393,7 @@ td.num { text-align: right; }
   });
   $("random").addEventListener("click", () => { state.value = Math.floor(Math.random() * 2 ** 48); render(); });
   $("copy").addEventListener("click", async () => {
-    const svg = C.capsuleSvg(state.value, options());
+    const svg = C.codeSvg(state.format, state.value, options());
     try { await navigator.clipboard.writeText(svg); $("copied").textContent = "SVG скопирован"; }
     catch { $("copied").textContent = "Буфер обмена недоступен: SVG выведен в консоль браузера"; console.log(svg); }
   });
@@ -354,8 +425,9 @@ td.num { text-align: right; }
       return;
     }
     $("photo-result").innerHTML = found.map((d) => {
-      const same = d.value === state.value;
-      return `<span class="big">${fmt(d.value)}</span>` +
+      const same = d.value === state.value && d.format === state.format;
+      const name = FORMATS.find((f) => f.id === d.format).name;
+      return `<span class="big">${fmt(d.value)}</span><span class="pill">${name}</span>` +
         `<span class="pill ${same ? "ok" : ""}">${same ? "совпадает с кодом сверху" : "другой код"}</span>` +
         `<span class="muted">${ms.toFixed(0)} мс · исправлено байт: ${d.corrected}${d.inverted ? " · светлая капсула" : ""}</span>`;
     }).join("<br>");
@@ -391,8 +463,9 @@ td.num { text-align: right; }
     const times = []; let ok = 0, wrong = 0;
     const R = (a, b) => a + (b - a) * Math.random();
     for (let i = 0; i < N; i++) {
-      const height = Math.round(R(34, 110));
-      const img = await svgImage(C.capsuleSvg(state.value, options({ height })));
+      const img = await svgImage(isRound()
+        ? C.codeSvg(state.format, state.value, options({ size: Math.round(R(state.format === "contour" ? 150 : 90, 300)) }))
+        : C.codeSvg("capsule", state.value, options({ height: Math.round(R(34, 110)) })));
       g.setTransform(1, 0, 0, 1, 0, 0);
       const grad = g.createLinearGradient(0, 0, W, H);
       grad.addColorStop(0, p.stage); grad.addColorStop(1, p.stage);
@@ -421,9 +494,9 @@ td.num { text-align: right; }
       const t0 = performance.now();
       const found = C.detect(px);
       times.push(performance.now() - t0);
-      const hit = found.some((f) => f.value === state.value);
+      const hit = found.some((f) => f.value === state.value && f.format === state.format);
       if (hit) ok++;
-      if (found.some((f) => f.value !== state.value)) wrong++;
+      if (found.some((f) => f.value !== state.value || f.format !== state.format)) wrong++;
       if (i < 12) {
         const url = URL.createObjectURL(blob);
         $("thumbs").insertAdjacentHTML("beforeend", `<figure><img src="${url}" alt="Кадр ${i + 1}"><figcaption class="${hit ? "ok" : "bad"}">${hit ? "прочитан" : "нет"}</figcaption></figure>`);
@@ -441,8 +514,9 @@ td.num { text-align: right; }
   });
 
   // Stress table from the SDK's test run
-  $("stress").innerHTML = `<thead><tr><th>Условия</th><th>Кадров</th><th>Прочитано</th></tr></thead><tbody>` +
-    STRESS.rows.map((r) => `<tr><td>${r.label}</td><td class="num">${r.n}</td><td><span class="meter"><i style="width:${r.rate}%"></i></span>${r.rate.toFixed(1)}%</td></tr>`).join("") + `</tbody>`;
+  const cell = (v) => `<td><span class="meter"><i style="width:${v}%"></i></span>${v.toFixed(0)}%</td>`;
+  $("stress").innerHTML = `<thead><tr><th>Стиль</th><th>Все кадры</th><th>Наклон до 20°</th><th>Наклон 45–55°</th><th>Самые мелкие</th><th>Неверно</th><th>Мс на кадр</th></tr></thead><tbody>` +
+    STRESS.formats.map((r) => `<tr><td>${FORMATS.find((f) => f.id === r.format).name}</td>${cell(r.all)}${cell(r.frontal)}${cell(r.steep)}<td>${r.smallLabel}: ${r.small.toFixed(0)}%</td><td class="num">${r.wrong}</td><td class="num">${Math.round(r.median)}</td></tr>`).join("") + `</tbody>`;
 
   render();
 })();

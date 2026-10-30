@@ -1,8 +1,29 @@
-# Capsule
+# Capsule codes
 
-A visual code shaped like a pill: a round finder, four rows of dots and dashes, and room for
-human-readable text inside the same shape. One TypeScript package with no dependencies: a generator
-(SVG, or geometry for any renderer) and a camera reader. About 9 KB gzipped.
+Five visual codes that carry the same 48-bit payload, with one generator and one camera reader for all
+of them. TypeScript, no dependencies, about 13 KB gzipped.
+
+| Format | Look |
+|---|---|
+| **capsule** | A pill: round finder, four rows of dots and dashes, and room for human-readable text inside. |
+| **orbit** | A solid lens with four rings of arcs; the inner ring is the same on every code. |
+| **constellation** | The orbit layout drawn as dots. |
+| **halo** | 52 rays of four lengths around the lens; the first four rays are fixed. |
+| **contour** | Four wavy rings like a topographic map; a bulge out is 1, in is 0. |
+
+## Shared format
+
+- Payload: 6 bytes (a number below 2^48, or any 6 bytes). Meant to be an ID that a server resolves,
+  so what a printed code opens can change after printing.
+- Reed–Solomon over GF(256), 6 data + 6 parity bytes. The reader corrects up to 2 bad bytes, or up to 4
+  when it knows which cells were unsure (erasures), and always keeps one parity byte spare to reject
+  a misread instead of correcting it into another payload.
+- Each format XORs the codeword with its own whitening sequence: the pattern stays lively for any
+  payload, and a code can never decode as another format (or a future version).
+- Bytes sit next to each other on the code (capsule: two columns per byte; round formats: cells
+  sorted by angle), so a smudge or a finger costs one or two bytes.
+
+## Capsule
 
 ```
  ╭────────────────────────────────────────────────────────────╮
@@ -20,93 +41,101 @@ human-readable text inside the same shape. One TypeScript package with no depend
 4. **End bar**: separates data from the label. Found by walking along the capsule's axis.
 5. **Label**: free text. The reader never looks there.
 
-## Format
+Geometry in `src/capsule-format.ts` (code units, pill height 2): the disc's ring between radius 0.42
+and 0.62 stays clear, marks are 0.2 wide on a 0.3 pitch.
 
-- Payload: 6 bytes (a number below 2^48, or any 6 bytes). Meant to be an ID that a server resolves,
-  so what a printed code opens can change after printing.
-- Reed–Solomon over GF(256), 6 data + 6 parity bytes. The reader corrects up to 2 bad bytes, or up to 4
-  when it knows which cells were unsure (erasures), and always keeps one parity byte spare to reject
-  a misread instead of correcting it into another payload.
-- Byte *b* fills columns 2b and 2b+1 top to bottom, so a smudge across a few columns costs one or two bytes.
-- Cells are XORed with a fixed whitening sequence. A future format version uses another sequence,
-  so its codes can never decode as this version.
-- Geometry (code units, pill height 2): see `src/format.ts`. The disc's ring between radius 0.42 and
-  0.62 must stay clear; marks are 0.2 wide on a 0.3 pitch.
+## Round formats
+
+All four have a solid lens in the middle (the finder) with a glyph or logo cut out of it, a paper gap
+around it, and data on rings out to radius ~1. Geometry in `src/radial.ts`.
+
+- **orbit**: sync ring of 24 cells at r 0.6 (fixed pattern), data rings of 28/32/36 cells at 0.7/0.8/0.9.
+  A run of set cells is one arc.
+- **constellation**: the same idea as dots, rings at 0.55 (sync), 0.65, 0.75, 0.85.
+- **halo**: 52 rays starting at r 0.53, lengths 0/0.12/0.24/0.38 (2 bits per ray, Gray-coded). The reader
+  traces each ray and uses end ÷ start, which doesn't depend on scale or perspective.
+- **contour**: rings at 0.57/0.69/0.81/0.93 with 20/24/28/32 cells, ±0.03 bulges. The inner ring breaks at
+  two cells: that's the start mark. The reader measures each line's position and removes the slow drift
+  (scale, perspective) before deciding bulge or dip. It needs about twice the size of the other formats.
 
 ## Generate
 
 ```ts
-import { capsuleSvg, capsuleLayout } from "capsule-code";
+import { codeSvg, capsuleLayout } from "capsule-code";
 
-capsuleSvg(123456789, { label: { title: "Maison", subtitle: "Table 12" } });
-capsuleSvg(123456789, { pill: "#ffffff", marks: "#111111" });          // light capsule on a dark card
-capsuleSvg(123456789, { style: "bare", caption: "Scan with the app" }); // marks straight on paper
-capsuleSvg(123456789, { rows: ["#fff", "#f6d7bd", "#efae84", "#e8875a"], logo: { href: "/logo.png" } });
+codeSvg("capsule", 123456789, { label: { title: "Maison", subtitle: "Table 12" } });
+codeSvg("capsule", 123456789, { pill: "#ffffff", marks: "#111111" });          // light capsule on a dark card
+codeSvg("capsule", 123456789, { style: "bare", caption: "Scan with the app" }); // marks straight on paper
+codeSvg("orbit", 123456789, { rings: ["#2f37a8", "#3a46cc", "#4451e0", "#4b58e6"] });
+codeSvg("halo", 123456789, { ink: "#ffffff", paper: "#111111" });               // white on black
+codeSvg("contour", 123456789, { logo: { href: "/logo.png" }, caption: "Scan me" });
 ```
 
-Options: `style` (`pill` | `bare`), `pill`, `marks`, `rows` (one colour per row), `disc`, `glyph`,
+Capsule options: `style` (`pill` | `bare`), `pill`, `marks`, `rows` (one colour per row), `disc`, `glyph`,
 `logo` (`glyph` | `none` | `{ href }` | `{ svg }`), `label` (string or `{ title, subtitle }`), `caption`,
 `text`, `fontFamily`, `measureText` (exact text widths; otherwise estimated and fitted with
-`textLength`), `background`, `margin`, `height` (px, sets width/height).
+`textLength`), `background`, `margin`, `height` (pill height in px).
 
-Any colours work as long as the marks contrast with the capsule (and the capsule with what is around it).
-`capsuleLayout()` returns the same geometry as data, for React Native, canvas or print pipelines.
+Round options: `ink`, `paper` (colour of the glyph cut out of the lens), `rings` (per ring; halo: per
+length), `lens`, `logo`, `caption`, `background`, `margin`, `size` (diameter in px).
+
+Any colours work as long as the marks contrast with what is around them. `capsuleLayout()` and
+`radialModel()` return the geometry as data, for React Native, canvas or print pipelines.
 
 ## Read
 
 ```ts
 import { detect, detectImage, scanVideo } from "capsule-code";
 
-detect({ data: imageData.data, width, height });   // RGBA or 8-bit luminance → Detection[]
-detectImage(imgOrBitmap);                          // a photo: tries several working sizes
+detect({ data: imageData.data, width, height });                 // RGBA or 8-bit luminance → Detection[]
+detect(frame, { formats: ["capsule", "orbit"] });                 // only some formats
+detectImage(imgOrBitmap);                                         // a photo: tries several working sizes
 const scanner = scanVideo(videoElement, { onDetect: (d) => open(d.value) });
 ```
 
-A `Detection` has `value` (number), `payload` (bytes), `corners` and `center` in image pixels,
-`size` (pill height in px), `inverted` (light capsule) and `corrected` (bytes fixed by error correction).
+A `Detection` has `format`, `value` (number), `payload` (bytes), `corners` and `center` in image pixels,
+`size` (capsule: pill height; round: diameter), `inverted` (marks darker than around them) and
+`corrected` (bytes fixed by error correction).
 
-How it reads a frame (`src/detect.ts`): luminance → adaptive threshold per 4×4 block (both polarities
-from one integral image) → connected components as runs → round components become disc candidates
-→ the start bar next to a disc gives the rotation → start bar, end bar and disc fix a homography →
-96 cells are sampled with per-row thresholds → Reed–Solomon.
+How a frame is read (`src/detect.ts`): luminance → adaptive threshold per 4×4 block (both polarities
+from one integral image) → connected components as runs → round components become finder candidates →
+each enabled format's reader tries them:
+
+- capsule (`src/capsule-read.ts`): the start bar next to the disc gives the rotation; start bar, end bar
+  and disc fix a homography; 96 cells are sampled with per-row thresholds.
+- round (`src/radial.ts`): a shared precheck (solid lens, paper gap, quiet zone, ink on the data rings)
+  drops most candidates cheaply; fixed points give the rotation (soft score, so it lands in the middle
+  of the match); cells are read against per-sector ink and paper levels; if that fails, small scale and
+  perspective corrections are tried.
+
+Every read ends in Reed–Solomon with a spare parity byte, so a wrong guess is rejected.
 
 ## Tests
 
 ```
-pnpm test        # Reed–Solomon, format round trips, software-rendered reads under perspective
-pnpm stress 600  # Chromium renders real SVGs with 3D tilt, blur, noise, JPEG, clutter; reads each frame once
-pnpm demo        # http://localhost:8000/demo/camera.html: live camera reader (localhost or https)
+pnpm test                    # Reed–Solomon, codeword round trips per format, software-rendered capsule reads
+pnpm stress 300 11 orbit     # Chromium renders real SVGs with 3D tilt, blur, noise, JPEG and clutter
+pnpm demo                    # http://localhost:8000/demo/camera.html: live camera reader (localhost or https)
 ```
 
-Stress results (600 frames 960×720, single frame, no accumulation; seed 7):
+Stress results (300 frames per format, 960×720, each frame read once with all formats enabled; seed 11):
 
-| Condition | Read |
-|---|---|
-| all (600 frames) | 92.3% |
-| blur 0.8-1.6px (158 frames) | 84.8% |
-| blur <0.8px (138 frames) | 96.4% |
-| blur none (304 frames) | 94.4% |
-| height 22-31px (37 frames) | 48.6% |
-| height 32-47px (67 frames) | 83.6% |
-| height 48-79px (129 frames) | 98.4% |
-| height 80-160px (367 frames) | 96.2% |
-| style bare (88 frames) | 89.8% |
-| style brand (121 frames) | 89.3% |
-| style inverted (111 frames) | 91.9% |
-| style pill+label (101 frames) | 93.1% |
-| style pill (90 frames) | 97.8% |
-| style rows (89 frames) | 93.3% |
-| tilt 0-19° (85 frames) | 95.3% |
-| tilt 20-34° (221 frames) | 95.9% |
-| tilt 35-44° (196 frames) | 90.3% |
-| tilt 45-55° (98 frames) | 85.7% |
+| Format | All | Tilt < 20° | Tilt 45–55° | Smallest bucket | Wrong | Median ms |
+|---|---|---|---|---|---|---|
+| capsule | 91.0% | 98.4% | 74.0% | 22–31 px tall: 55.6% | 0 | 35 |
+| orbit | 89.7% | 90.2% | 90.0% | 40–59 px wide: 23.8% | 0 | 34 |
+| constellation | 87.0% | 91.8% | 88.0% | 40–59 px wide: 19.0% | 0 | 41 |
+| halo | 77.3% | 82.0% | 72.0% | 40–59 px wide: 19.0% | 0 | 37 |
+| contour | 54.7% | 72.1% | 42.0% | 40–59 px wide: 0.0% | 0 | 38 |
 
-Wrong payloads: 0. Time per frame (both polarities, one server core, Node): median 23.6 ms, p90 34.6 ms.
+Time is per 960×720 frame with all five formats and both polarities, in Node on one server core.
 
 ## Limits
 
-- Phone cameras don't read Capsule by themselves: it needs this reader in an app, a website or an App Clip.
-  Where people scan with the stock camera, pair it with NFC or a small QR code.
-- Below ~32 px of pill height in the working frame the marks are under 3 px wide and reads get unreliable.
-  For small codes in large frames, read at a higher working size (`maxDimension`).
-- Tilt beyond ~45° reads less often in a single frame; in a live camera feed a few frames are usually enough.
+- Phone cameras don't read these codes by themselves: they need this reader in an app, a website or an
+  App Clip. Where people scan with the stock camera, pair a code with NFC or a small QR code.
+- Small codes: below ~32 px of capsule height or ~60 px of round diameter in the working frame, marks are
+  only a few pixels wide. For small codes in large frames, read at a higher working size (`maxDimension`).
+  Contour needs about 150 px.
+- Strong tilt (45° and more) reads less often in a single frame; in a live camera feed a few frames are
+  usually enough.

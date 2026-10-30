@@ -2,7 +2,7 @@
   "name": "capsule-code",
   "version": "0.1.0",
   "private": true,
-  "description": "Capsule: a pill-shaped visual code with room for human-readable text. Generator and camera reader, no dependencies.",
+  "description": "Capsule codes: five visual codes (capsule, orbit, constellation, halo, contour) with one generator and one camera reader, no dependencies.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
