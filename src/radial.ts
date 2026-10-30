@@ -30,10 +30,13 @@ interface Spec {
   /** A radius between lens and data that is always paper (except where `known` says otherwise). */
   paper: number;
   seed: number;
+  /** Where between paper (0) and ink (1) the rotation search splits: lower for formats that may use light colours. */
+  split: number;
   /** Radii where the data lives: a real code has ink there at a fair share of angles. */
   data: number[];
   /** Sample points with a fixed value on every code: they give the rotation. */
-  known: { r: number; a: number; ink: boolean; w: number }[];
+  /** `dr`: also look this far in and out, keeping the inkiest sample (for lines whose radius varies). */
+  known: { r: number; a: number; ink: boolean; w: number; dr?: number }[];
 }
 
 // ---------- orbit & constellation: binary cells on rings ----------
@@ -47,7 +50,7 @@ interface CellLayout extends Spec {
   cells: { ring: number; i: number; a: number }[];
 }
 
-function cellLayout(sync: Ring, rings: Ring[], spec: Omit<Spec, "known" | "data">): CellLayout {
+function cellLayout(sync: Ring, rings: Ring[], spec: Omit<Spec, "known" | "data" | "split">): CellLayout {
   const cells: CellLayout["cells"] = [];
   rings.forEach((ring, k) => {
     for (let i = 0; i < ring.n; i++) cells.push({ ring: k, i, a: ((i + 0.5) / ring.n) * TAU });
@@ -55,7 +58,7 @@ function cellLayout(sync: Ring, rings: Ring[], spec: Omit<Spec, "known" | "data"
   cells.sort((p, q) => p.a - q.a || p.ring - q.ring);
   if (cells.length !== CODEWORD_BITS) throw new Error("layout must hold exactly one codeword");
   const known = [...SYNC].map((c, i) => ({ r: sync.r, a: ((i + 0.5) / sync.n) * TAU, ink: c === "1", w: 1 }));
-  return { ...spec, sync, rings, cells, known, data: rings.map((r) => r.r) };
+  return { ...spec, sync, rings, cells, known, data: rings.map((r) => r.r), split: 0.5 };
 }
 
 const ORBIT = cellLayout({ r: 0.6, n: 24 }, [{ r: 0.7, n: 28 }, { r: 0.8, n: 32 }, { r: 0.9, n: 36 }], {
@@ -68,9 +71,9 @@ const ORBIT_STROKE = 0.072;
 const ORBIT_GAP = 0.06;
 
 const CONSTELLATION = cellLayout({ r: 0.55, n: 24 }, [{ r: 0.65, n: 28 }, { r: 0.75, n: 32 }, { r: 0.85, n: 36 }], {
-  lens: 0.42,
-  glyph: 0.31,
-  paper: 0.485,
+  lens: 0.4,
+  glyph: 0.29,
+  paper: 0.455,
   seed: 0xc0175e11,
 });
 const DOT_R = 0.04;
@@ -83,7 +86,7 @@ const HALO_R0 = 0.53;
 const HALO_LEN = [0, 0.12, 0.24, 0.38];
 /** Radii between consecutive length levels: ink there means the ray reaches past it. */
 const HALO_PROBES = [HALO_R0 + 0.06, HALO_R0 + 0.18, HALO_R0 + 0.31];
-const HALO_STROKE = 0.042;
+const HALO_STROKE = 0.05;
 /** Ray end ÷ ray start (outer edge ÷ inner edge of the ink) between consecutive levels. */
 const HALO_RATIO_SPLIT = (() => {
   const inner = HALO_R0 - HALO_STROKE / 2;
@@ -91,10 +94,11 @@ const HALO_RATIO_SPLIT = (() => {
   return [0, 1, 2].map((k) => (ratios[k] + ratios[k + 1]) / 2);
 })();
 const HALO: Spec = {
-  lens: 0.43,
-  glyph: 0.31,
-  paper: 0.475,
+  lens: 0.4,
+  glyph: 0.29,
+  paper: 0.455,
   seed: 0x4a10c0de,
+  split: 0.35,
   data: HALO_PROBES,
   known: (() => {
     const k: Spec["known"] = [];
@@ -110,14 +114,14 @@ const LEVEL_TO_GRAY = [0, 1, 3, 2];
 // ---------- contour: wavy rings ----------
 
 const CONTOUR_RINGS: Ring[] = [{ r: 0.57, n: 20 }, { r: 0.69, n: 24 }, { r: 0.81, n: 28 }, { r: 0.93, n: 32 }];
-const CONTOUR_AMP = 0.025;
-const CONTOUR_STROKE = 0.04;
-const CONTOUR_DOTS = [0, 20, 60].map((d) => (d / 360) * TAU);
-const CONTOUR_DOT_R = 0.475;
+const CONTOUR_AMP = 0.03;
+const CONTOUR_STROKE = 0.036;
+/** Cells of the inner ring where the line breaks: they mark the start, like a notch on a dial. */
+const CONTOUR_BREAKS = [0, 3];
 const CONTOUR_CELLS = (() => {
   const cells: { ring: number; i: number; a: number }[] = [];
   CONTOUR_RINGS.forEach((ring, k) => {
-    for (let i = 0; i < ring.n; i++) cells.push({ ring: k, i, a: ((i + 0.5) / ring.n) * TAU });
+    for (let i = 0; i < ring.n; i++) if (k > 0 || !CONTOUR_BREAKS.includes(i)) cells.push({ ring: k, i, a: ((i + 0.5) / ring.n) * TAU });
   });
   return cells.sort((p, q) => p.a - q.a || p.ring - q.ring);
 })();
@@ -126,17 +130,17 @@ const CONTOUR_PAD = (i: number) => i % 2 === 0;
 const CONTOUR: Spec = {
   lens: 0.42,
   glyph: 0.3,
-  paper: CONTOUR_DOT_R,
+  paper: 0.475,
   seed: 0xc047c0de,
+  split: 0.5,
   data: CONTOUR_RINGS.map((r) => r.r),
-  known: (() => {
-    const k: Spec["known"] = CONTOUR_DOTS.map((a) => ({ r: CONTOUR_DOT_R, a, ink: true, w: 4 }));
-    for (let d = 0; d < 360; d += 10) {
-      const a = (d / 360) * TAU;
-      if (CONTOUR_DOTS.every((b) => Math.abs(((a - b + Math.PI * 3) % TAU) - Math.PI) > 0.12)) k.push({ r: CONTOUR_DOT_R, a, ink: false, w: 1 });
-    }
-    return k;
-  })(),
+  known: Array.from({ length: CONTOUR_RINGS[0].n }, (_, i) => ({
+    r: CONTOUR_RINGS[0].r,
+    a: ((i + 0.5) / CONTOUR_RINGS[0].n) * TAU,
+    ink: !CONTOUR_BREAKS.includes(i),
+    w: CONTOUR_BREAKS.includes(i) ? 4 : 1,
+    dr: CONTOUR_AMP,
+  })),
 };
 
 const SPECS: Record<RadialFormat, Spec> = { orbit: ORBIT, constellation: CONSTELLATION, halo: HALO, contour: CONTOUR };
@@ -264,25 +268,30 @@ export function radialSvg(format: RadialFormat, payload: Payload | number | bigi
   } else {
     model.rings.forEach((ring, k) => {
       const v = ring.bits.map((b) => (b ? 1 : -1));
-      let d = "";
+      // The inner ring breaks around its start cells; the line is drawn from the end of one break round to the next.
+      const breaks = k === 0 ? CONTOUR_BREAKS : [];
+      const inBreak = (x: number) => breaks.some((b) => Math.abs(((x - b + ring.n * 1.5) % ring.n) - ring.n / 2) < 0.3);
       const steps = 240;
+      const start = breaks.length ? Math.round(((breaks[0] + 0.5 + 0.3) / ring.n) * steps) : 0;
+      let d = "";
+      let pen = false;
       for (let j = 0; j <= steps; j++) {
-        const a = (j / steps) * TAU;
+        const a = (((j + start) % steps) / steps) * TAU;
         const x = (a / TAU) * ring.n - 0.5;
+        if (inBreak(x)) {
+          pen = false;
+          continue;
+        }
         const i0 = Math.floor(x);
         const u = x - i0;
         const w = (1 - Math.cos(Math.PI * u)) / 2;
         const val = v[(i0 + ring.n) % ring.n] * (1 - w) + v[(i0 + 1) % ring.n] * w;
         const [px, py] = polar(ring.r + CONTOUR_AMP * val, a);
-        d += `${j ? "L" : "M"}${n(px)} ${n(py)}`;
+        d += `${pen ? "L" : "M"}${n(px)} ${n(py)}`;
+        pen = true;
       }
-      body += `<path d="${d}Z" fill="none" stroke="${ringColor(k)}" stroke-width="${CONTOUR_STROKE}" stroke-linejoin="round"/>`;
+      body += `<path d="${d}${breaks.length ? "" : "Z"}" fill="none" stroke="${ringColor(k)}" stroke-width="${CONTOUR_STROKE}" stroke-linejoin="round" stroke-linecap="round"/>`;
     });
-    const dots = CONTOUR_DOTS.map((a) => {
-      const [x, y] = polar(CONTOUR_DOT_R, a);
-      return `M${n(x - 0.022)} ${n(y)}a.022 .022 0 1 0 .044 0a.022 .022 0 1 0 -.044 0`;
-    }).join("");
-    body += `<path d="${dots}" fill="${ringColor(0)}"/>`;
   }
 
   body += `<circle r="${spec.lens}" fill="${options.lens ?? ink}"/>`;
@@ -380,15 +389,15 @@ export function readRadial(format: RadialFormat, P: Polarity, e: Ellipse): Read 
 
   // Rotation. Soft score: how far each fixed point sits on its expected side of the split. A hard
   // match count is flat across a few degrees and would leave the rotation at the edge of that plateau.
-  // The split sits nearer paper than ink: rings may be printed in lighter colours than the lens.
   const total = spec.known.reduce((s, k) => s + k.w, 0);
-  const tk = paper + (ink - paper) * 0.35;
-  const span = (ink - paper) * 0.35;
+  const tk = paper + (ink - paper) * spec.split;
+  const span = (ink - paper) * Math.min(spec.split, 1 - spec.split);
   const score = (psi: number) => {
     const m = affineMap(e, psi, spec.lens);
     let s = 0;
     for (const k of spec.known) {
-      const v = Math.max(-1, Math.min(1, (at(m, k.r, k.a) - tk) / span));
+      const raw = k.dr ? Math.max(at(m, k.r - k.dr, k.a), at(m, k.r, k.a), at(m, k.r + k.dr, k.a)) : at(m, k.r, k.a);
+      const v = Math.max(-1, Math.min(1, (raw - tk) / span));
       s += k.w * (k.ink ? v : -v);
     }
     return s;
@@ -437,8 +446,21 @@ export function readRadial(format: RadialFormat, P: Polarity, e: Ellipse): Read 
     return (v - p) / Math.max(8, i - p);
   };
 
-  for (const scale of [1, 0.97, 1.03, 0.94, 1.06]) {
-    const m: Map2 = (x, y) => rot(x * scale, y * scale);
+  // If the plain read fails: small scale corrections, then perspective. x / (1 + p·x) keeps the lens
+  // (centre and local scale) as fitted but bends the outer rings the way a tilted view does.
+  const tries: [number, number, number][] = [];
+  for (const scale of [1, 0.97, 1.03, 0.94, 1.06]) tries.push([scale, 0, 0]);
+  for (const mag of [0.1, 0.2]) {
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * TAU;
+      for (const scale of [1, 0.96, 1.04]) tries.push([scale, mag * Math.cos(a), mag * Math.sin(a)]);
+    }
+  }
+  for (const [scale, px, py] of tries) {
+    const m: Map2 = (x, y) => {
+      const w = 1 + px * x + py * y;
+      return rot((x * scale) / w, (y * scale) / w);
+    };
     const out = readCells(format, m, (r, a) => rel(at(m, r, a), a));
     if (!out) continue;
     const decoded = decodeBits(out.bits, spec.seed, out.conf);
@@ -523,28 +545,39 @@ function readCells(format: RadialFormat, m: Map2, relAt: (r: number, a: number) 
     return { bits, conf };
   }
   // contour: where along the radius each ring's line sits at each cell, relative to the ring's own trend.
-  const offsets = CONTOUR_RINGS.map((ring) => {
-    const raw: number[] = [];
-    for (let i = 0; i < ring.n; i++) {
+  const isBreak = (ring: Ring, i: number) => ring === CONTOUR_RINGS[0] && CONTOUR_BREAKS.includes(i);
+  // Line position (radial offset from the nominal radius) at each cell: the ink-weighted centre of a window.
+  const measure = (ring: Ring, center: number[], half: number) =>
+    center.map((c, i) => {
+      if (isBreak(ring, i)) return c;
       const a = ((i + 0.5) / ring.n) * TAU;
       let sw = 0, sx = 0;
-      for (let d = -0.055; d <= 0.0551; d += 0.011) {
+      for (let d = c - half; d <= c + half + 1e-9; d += half / 6) {
         const w = Math.max(0, relAt(ring.r + d, a) - 0.25);
         sw += w;
         sx += w * d;
       }
-      raw.push(sw > 0 ? sx / sw : 0);
-    }
-    // Remove what perspective and scale errors add: a constant and the first two harmonics.
+      return sw > 0 ? sx / sw : c;
+    });
+  // Separate the slow drift (scale and perspective errors: a constant and two harmonics) from the
+  // ±amplitude signal, alternating: estimate the signal, fit the drift to what's left, repeat.
+  const split = (ring: Ring, raw: number[]) => {
     let signal = raw.map(() => 0);
-    for (let iter = 0; iter < 3; iter++) {
-      const resid = raw.map((v, i) => v - signal[i]);
-      const trend = harmonicFit(resid, ring.n);
-      const dev = raw.map((v, i) => v - trend[i]);
-      signal = dev.map((v) => (v > 0 ? CONTOUR_AMP : -CONTOUR_AMP));
-      if (iter === 2) return dev;
+    let trend = raw.map(() => 0);
+    for (let iter = 0; iter < 4; iter++) {
+      trend = harmonicFit(raw.map((v, i) => v - signal[i]), ring.n);
+      signal = raw.map((v, i) => (v - trend[i] > 0 ? CONTOUR_AMP : -CONTOUR_AMP));
     }
-    return raw;
+    return trend;
+  };
+  const offsets = CONTOUR_RINGS.map((ring) => {
+    // First pass with a wide window finds where the ring really is; the second re-centres a
+    // narrower window on that drift, so a neighbouring ring can't pull the centre.
+    const wide = measure(ring, new Array(ring.n).fill(0), 0.065);
+    const drift = split(ring, wide);
+    const fine = measure(ring, drift, CONTOUR_AMP + 0.03);
+    const trend = split(ring, fine);
+    return fine.map((v, i) => (isBreak(ring, i) ? 0 : v - trend[i]));
   });
   const bits: boolean[] = [];
   const conf: number[] = [];

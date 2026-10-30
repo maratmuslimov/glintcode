@@ -36,3 +36,16 @@ test("reads under perspective", () => {
   const found = detect({ data: img, width: 640, height: 480 });
   assert.equal(found[0]?.value, v);
 });
+
+test("every format's codeword round-trips and never decodes under another format's whitening", async () => {
+  const { decodeBits, encodeBits } = await import("../src/codeword");
+  const seeds = [0x5ca9c0de, 0x0b17c0de, 0xc0175e11, 0x4a10c0de, 0xc047c0de];
+  for (let i = 0; i < 300; i++) {
+    const v = Math.floor(Math.random() * 2 ** 48);
+    for (const seed of seeds) {
+      const bits = encodeBits(v, seed);
+      assert.equal(payloadToNumber(decodeBits(bits, seed)!.payload), v);
+      for (const other of seeds) if (other !== seed) assert.equal(decodeBits(bits, other), null);
+    }
+  }
+});
