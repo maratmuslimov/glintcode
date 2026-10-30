@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Capsule · камера</title>
+<style>
+  body { margin: 0; background: #000; color: #fff; font: 15px system-ui, sans-serif; }
+  .wrap { position: relative; max-width: 960px; margin: 0 auto; }
+  video, canvas { width: 100%; display: block; }
+  canvas { position: absolute; inset: 0; height: 100%; }
+  .bar { display: flex; gap: 16px; padding: 12px 16px; font-variant-numeric: tabular-nums; }
+  .value { font-size: 22px; font-weight: 700; }
+  button { font: inherit; padding: 8px 14px; border-radius: 10px; border: 0; }
+</style>
+</head>
+<body>
+<div class="bar"><button id="start">Включить камеру</button><span class="value" id="value">—</span><span id="ms"></span></div>
+<div class="wrap"><video id="video" playsinline muted></video><canvas id="overlay"></canvas></div>
+<script type="module">
+  // Local demo: pnpm demo, then open http://localhost:8000/demo/camera.html (camera needs localhost or https).
+  import { scanVideo } from "../dist/capsule.js";
+  const video = document.getElementById("video");
+  const overlay = document.getElementById("overlay");
+  document.getElementById("start").onclick = async () => {
+    video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280, height: 720 } });
+    await video.play();
+    let avg = 0;
+    scanVideo(video, {
+      onDetect: (d) => {
+        document.getElementById("value").textContent = d.value.toLocaleString("ru-RU");
+        navigator.vibrate?.(30);
+      },
+      onFrame: (found, ms) => {
+        avg = avg ? avg * 0.9 + ms * 0.1 : ms;
+        document.getElementById("ms").textContent = `${avg.toFixed(1)} мс/кадр`;
+        overlay.width = video.videoWidth;
+        overlay.height = video.videoHeight;
+        const g = overlay.getContext("2d");
+        g.strokeStyle = "#2ee06f";
+        g.lineWidth = 4;
+        for (const d of found) {
+          g.beginPath();
+          d.corners.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+          g.closePath();
+          g.stroke();
+        }
+      },
+    });
+  };
+</script>
+</body>
+</html>
