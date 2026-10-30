@@ -1,0 +1,449 @@
+{
+  "seed": 11,
+  "width": 960,
+  "height": 720,
+  "node": "v22.16.0",
+  "formats": [
+    {
+      "format": "capsule",
+      "frames": 300,
+      "wrong": 0,
+      "medianMs": 28.8,
+      "p90Ms": 35.3,
+      "buckets": {
+        "all": {
+          "n": 300,
+          "ok": 273
+        },
+        "blur 0.8-1.6px": {
+          "n": 79,
+          "ok": 65
+        },
+        "blur <0.8px": {
+          "n": 76,
+          "ok": 70
+        },
+        "blur none": {
+          "n": 145,
+          "ok": 138
+        },
+        "height 22-31px": {
+          "n": 18,
+          "ok": 10
+        },
+        "height 32-47px": {
+          "n": 36,
+          "ok": 30
+        },
+        "height 48-79px": {
+          "n": 69,
+          "ok": 67
+        },
+        "height 80-160px": {
+          "n": 177,
+          "ok": 166
+        },
+        "style bare": {
+          "n": 58,
+          "ok": 55
+        },
+        "style brand": {
+          "n": 44,
+          "ok": 40
+        },
+        "style inverted": {
+          "n": 38,
+          "ok": 35
+        },
+        "style pill+label": {
+          "n": 65,
+          "ok": 59
+        },
+        "style pill": {
+          "n": 43,
+          "ok": 38
+        },
+        "style rows": {
+          "n": 52,
+          "ok": 46
+        },
+        "tilt 0-19°": {
+          "n": 61,
+          "ok": 60
+        },
+        "tilt 20-34°": {
+          "n": 103,
+          "ok": 99
+        },
+        "tilt 35-44°": {
+          "n": 86,
+          "ok": 77
+        },
+        "tilt 45-55°": {
+          "n": 50,
+          "ok": 37
+        }
+      }
+    },
+    {
+      "format": "orbit",
+      "frames": 300,
+      "wrong": 0,
+      "medianMs": 27.2,
+      "p90Ms": 34.1,
+      "buckets": {
+        "all": {
+          "n": 300,
+          "ok": 267
+        },
+        "blur 0.8-1.6px": {
+          "n": 76,
+          "ok": 63
+        },
+        "blur <0.8px": {
+          "n": 71,
+          "ok": 64
+        },
+        "blur none": {
+          "n": 153,
+          "ok": 140
+        },
+        "size 100-179px": {
+          "n": 44,
+          "ok": 43
+        },
+        "size 180-319px": {
+          "n": 73,
+          "ok": 73
+        },
+        "size 320-640px": {
+          "n": 152,
+          "ok": 133
+        },
+        "size 40-59px": {
+          "n": 14,
+          "ok": 5
+        },
+        "size 60-99px": {
+          "n": 17,
+          "ok": 13
+        },
+        "style caption": {
+          "n": 61,
+          "ok": 55
+        },
+        "style ink": {
+          "n": 59,
+          "ok": 54
+        },
+        "style inverted": {
+          "n": 68,
+          "ok": 59
+        },
+        "style rings": {
+          "n": 65,
+          "ok": 54
+        },
+        "style warm+logo": {
+          "n": 47,
+          "ok": 45
+        },
+        "tilt 0-19°": {
+          "n": 46,
+          "ok": 43
+        },
+        "tilt 20-34°": {
+          "n": 103,
+          "ok": 97
+        },
+        "tilt 35-44°": {
+          "n": 98,
+          "ok": 85
+        },
+        "tilt 45-55°": {
+          "n": 53,
+          "ok": 42
+        }
+      }
+    },
+    {
+      "format": "halo",
+      "frames": 300,
+      "wrong": 0,
+      "medianMs": 30.7,
+      "p90Ms": 374.8,
+      "buckets": {
+        "all": {
+          "n": 300,
+          "ok": 217
+        },
+        "blur 0.8-1.6px": {
+          "n": 74,
+          "ok": 46
+        },
+        "blur <0.8px": {
+          "n": 71,
+          "ok": 51
+        },
+        "blur none": {
+          "n": 155,
+          "ok": 120
+        },
+        "size 100-179px": {
+          "n": 37,
+          "ok": 33
+        },
+        "size 180-319px": {
+          "n": 62,
+          "ok": 59
+        },
+        "size 320-640px": {
+          "n": 166,
+          "ok": 105
+        },
+        "size 40-59px": {
+          "n": 11,
+          "ok": 3
+        },
+        "size 60-99px": {
+          "n": 24,
+          "ok": 17
+        },
+        "style caption": {
+          "n": 60,
+          "ok": 47
+        },
+        "style ink": {
+          "n": 61,
+          "ok": 43
+        },
+        "style inverted": {
+          "n": 66,
+          "ok": 51
+        },
+        "style rings": {
+          "n": 52,
+          "ok": 24
+        },
+        "style warm+logo": {
+          "n": 61,
+          "ok": 52
+        },
+        "tilt 0-19°": {
+          "n": 38,
+          "ok": 34
+        },
+        "tilt 20-34°": {
+          "n": 102,
+          "ok": 84
+        },
+        "tilt 35-44°": {
+          "n": 100,
+          "ok": 66
+        },
+        "tilt 45-55°": {
+          "n": 60,
+          "ok": 33
+        }
+      }
+    },
+    {
+      "format": "constellation",
+      "frames": 300,
+      "wrong": 0,
+      "medianMs": 30.8,
+      "p90Ms": 40,
+      "buckets": {
+        "all": {
+          "n": 300,
+          "ok": 270
+        },
+        "blur 0.8-1.6px": {
+          "n": 88,
+          "ok": 75
+        },
+        "blur <0.8px": {
+          "n": 78,
+          "ok": 74
+        },
+        "blur none": {
+          "n": 134,
+          "ok": 121
+        },
+        "size 100-179px": {
+          "n": 40,
+          "ok": 39
+        },
+        "size 180-319px": {
+          "n": 71,
+          "ok": 70
+        },
+        "size 320-640px": {
+          "n": 160,
+          "ok": 147
+        },
+        "size 40-59px": {
+          "n": 7,
+          "ok": 0
+        },
+        "size 60-99px": {
+          "n": 22,
+          "ok": 14
+        },
+        "style caption": {
+          "n": 55,
+          "ok": 51
+        },
+        "style ink": {
+          "n": 76,
+          "ok": 67
+        },
+        "style inverted": {
+          "n": 61,
+          "ok": 57
+        },
+        "style rings": {
+          "n": 50,
+          "ok": 41
+        },
+        "style warm+logo": {
+          "n": 58,
+          "ok": 54
+        },
+        "tilt 0-19°": {
+          "n": 53,
+          "ok": 50
+        },
+        "tilt 20-34°": {
+          "n": 92,
+          "ok": 83
+        },
+        "tilt 35-44°": {
+          "n": 105,
+          "ok": 92
+        },
+        "tilt 45-55°": {
+          "n": 50,
+          "ok": 45
+        }
+      }
+    },
+    {
+      "format": "contour",
+      "frames": 300,
+      "wrong": 0,
+      "medianMs": 32.5,
+      "p90Ms": 144.7,
+      "buckets": {
+        "all": {
+          "n": 300,
+          "ok": 185
+        },
+        "blur 0.8-1.6px": {
+          "n": 82,
+          "ok": 40
+        },
+        "blur <0.8px": {
+          "n": 84,
+          "ok": 59
+        },
+        "blur none": {
+          "n": 134,
+          "ok": 86
+        },
+        "size 100-179px": {
+          "n": 48,
+          "ok": 28
+        },
+        "size 180-319px": {
+          "n": 64,
+          "ok": 56
+        },
+        "size 320-640px": {
+          "n": 161,
+          "ok": 94
+        },
+        "size 40-59px": {
+          "n": 7,
+          "ok": 0
+        },
+        "size 60-99px": {
+          "n": 20,
+          "ok": 7
+        },
+        "style caption": {
+          "n": 51,
+          "ok": 34
+        },
+        "style ink": {
+          "n": 59,
+          "ok": 35
+        },
+        "style inverted": {
+          "n": 60,
+          "ok": 41
+        },
+        "style rings": {
+          "n": 69,
+          "ok": 35
+        },
+        "style warm+logo": {
+          "n": 61,
+          "ok": 40
+        },
+        "tilt 0-19°": {
+          "n": 54,
+          "ok": 49
+        },
+        "tilt 20-34°": {
+          "n": 94,
+          "ok": 70
+        },
+        "tilt 35-44°": {
+          "n": 94,
+          "ok": 44
+        },
+        "tilt 45-55°": {
+          "n": 58,
+          "ok": 22
+        }
+      }
+    }
+  ],
+  "negatives": {
+    "frames": 300,
+    "falseReads": 0
+  },
+  "clean": [
+    {
+      "format": "capsule",
+      "frames": 480,
+      "read": 480,
+      "wrong": 0
+    },
+    {
+      "format": "orbit",
+      "frames": 480,
+      "read": 480,
+      "wrong": 0
+    },
+    {
+      "format": "halo",
+      "frames": 480,
+      "read": 480,
+      "wrong": 0
+    },
+    {
+      "format": "constellation",
+      "frames": 480,
+      "read": 480,
+      "wrong": 0
+    },
+    {
+      "format": "contour",
+      "frames": 480,
+      "read": 480,
+      "wrong": 0
+    }
+  ]
+}

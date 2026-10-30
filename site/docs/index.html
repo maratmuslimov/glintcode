@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glint docs</title>
+<meta name="description" content="Install, generate and read Glint codes in JavaScript, Swift and Kotlin.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script type="module" src="/src/docs.ts"></script>
+</head>
+<body class="docs">
+<header class="nav">
+  <a class="brand" href="/">glint</a>
+  <nav><a href="/">Home</a><a href="/#make">Generate</a><a href="/#read">Read</a><a href="https://github.com/maratmuslimov/glintcode">GitHub</a></nav>
+</header>
+<div class="docs-layout">
+<aside>
+  <a href="#start">Quick start</a>
+  <a href="#payload">Payloads</a>
+  <a href="#generate">Generate</a>
+  <a href="#options">Style options</a>
+  <a href="#read">Read in JavaScript</a>
+  <a href="#swift">Swift</a>
+  <a href="#kotlin">Kotlin</a>
+  <a href="#ports">Reader parity</a>
+  <a href="#printing">Printing</a>
+  <a href="#format">Format</a>
+</aside>
+<article>
+<h1>Docs</h1>
+<h2 id="start">Quick start</h2>
+<pre><code>npm i glintcode</code></pre>
+<pre><code>import { codeSvg, scanVideo } from "glintcode";
+
+// Generate: an SVG string, on the server or in the browser
+const svg = codeSvg("orbit", 123456789);
+
+// Read: from a playing &lt;video&gt;
+const scanner = scanVideo(video, { onDetect: (d) =&gt; console.log(d.format, d.value) });
+scanner.stop();</code></pre>
+<p>The package has no dependencies and works in Node, browsers and bundlers. Camera access needs HTTPS or localhost.</p>
+
+<h2 id="payload">Payloads</h2>
+<p>Every style carries 6 bytes: a number from 0 to 2<sup>48</sup> − 1, or any 6 bytes as a <code>Uint8Array</code>. Treat it as an ID that your server looks up. That way, what a printed code opens can change after printing.</p>
+<p>Pick IDs at random. A code can't prove where it came from, so don't use one as a password or a ticket without a server-side check.</p>
+
+<h2 id="generate">Generate</h2>
+<pre><code>import { codeSvg } from "glintcode";
+
+codeSvg("capsule", 123456789, { label: { title: "Maison", subtitle: "Table 12" } });
+codeSvg("capsule", 123456789, { pill: "#ffffff", marks: "#111111" });
+codeSvg("capsule", 123456789, { style: "bare", caption: "Scan with the app" });
+codeSvg("orbit", 123456789, { rings: ["#2f37a8", "#3a46cc", "#4451e0", "#4b58e6"] });
+codeSvg("halo", 123456789, { ink: "#ffffff", paper: "#111111" });
+codeSvg("contour", 123456789, { logo: { href: "/logo.png" }, caption: "Scan me" });</code></pre>
+<p><code>capsuleLayout()</code> and <code>radialModel()</code> return the geometry as data, for native views, canvas or print pipelines.</p>
+
+<h2 id="options">Style options</h2>
+<table>
+<thead><tr><th>Option</th><th>Styles</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>style</code></td><td>Capsule</td><td><code>pill</code> or <code>bare</code> (marks directly on the background)</td></tr>
+<tr><td><code>pill</code>, <code>marks</code>, <code>rows</code>, <code>disc</code>, <code>glyph</code></td><td>Capsule</td><td>Colours; <code>rows</code> takes one colour per row</td></tr>
+<tr><td><code>label</code></td><td>Capsule</td><td>Text inside the pill: a string or <code>{ title, subtitle }</code></td></tr>
+<tr><td><code>measureText</code></td><td>Capsule</td><td>Exact text widths; estimated if you leave it out</td></tr>
+<tr><td><code>height</code></td><td>Capsule</td><td>Pill height in px</td></tr>
+<tr><td><code>ink</code>, <code>paper</code>, <code>lens</code>, <code>rings</code></td><td>Round</td><td>Colours; <code>rings</code> takes one per ring (Halo: per length)</td></tr>
+<tr><td><code>size</code></td><td>Round</td><td>Diameter in px</td></tr>
+<tr><td><code>logo</code></td><td>All</td><td><code>"glyph"</code>, <code>"none"</code>, <code>{ href }</code> or <code>{ svg }</code></td></tr>
+<tr><td><code>caption</code>, <code>captionColor</code>, <code>fontFamily</code></td><td>All</td><td>Text under the code</td></tr>
+<tr><td><code>background</code>, <code>margin</code>, <code>title</code></td><td>All</td><td>Fill, clear margin in code units, accessible name</td></tr>
+</tbody>
+</table>
+<p>Any colours work as long as the marks contrast with what's around them. The generator on the home page checks a colour pair by reading it back.</p>
+
+<h2 id="read">Read in JavaScript</h2>
+<pre><code>import { detect, detectImage, scanVideo } from "glintcode";
+
+detect({ data: imageData.data, width, height });     // RGBA or 8-bit luminance
+detect(frame, { formats: ["capsule", "orbit"] });    // only some styles
+detectImage(imgOrBitmap);                            // a photo: tries several working sizes
+scanVideo(video, { onDetect, onFrame, repeatAfter: 3000 });</code></pre>
+<p>A detection has <code>format</code>, <code>value</code>, <code>payload</code>, <code>corners</code>, <code>center</code>, <code>size</code>, <code>inverted</code> and <code>corrected</code> (bytes fixed by error correction). <code>detect</code> takes <code>formats</code>, <code>polarity</code>, <code>maxDimension</code> and <code>maxResults</code>. Asking for fewer styles and one polarity is the easiest way to save time per frame.</p>
+
+<h2 id="swift">Swift</h2>
+<p>Add the package <code>https://github.com/maratmuslimov/glintcode</code> in Xcode or to <code>Package.swift</code>. iOS 15 and macOS 12 or later.</p>
+<pre><code>import Glint
+
+let found = Glint.detect(gray: pixels, width: width, height: height)
+
+// From AVCaptureVideoDataOutput (bi-planar YUV or BGRA); call from one queue at a time
+let scanner = GlintScanner(maxDimension: 1280)
+scanner.onDetect = { detection in print(detection.format, detection.value) }
+
+func captureOutput(_ output: AVCaptureOutput, didOutput buffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+  scanner.scan(buffer)
+}</code></pre>
+<p>The scanner shrinks frames by a whole factor, so use a <code>maxDimension</code> of at least your frame's long side, or a 1280×720 frame is read at 640×360.</p>
+
+<h2 id="kotlin">Kotlin</h2>
+<p>The <code>kotlin</code> folder of the repository has two modules: <code>glint</code> (plain JVM, no Android dependency) and <code>glint-android</code> (a CameraX analyzer). They aren't on Maven yet, so add the repository as a submodule and use a Gradle composite build.</p>
+<pre><code>// settings.gradle.kts
+includeBuild("glintcode/kotlin")    // Android: add glint.android=true to gradle.properties
+
+// build.gradle.kts
+implementation("codes.glint:glint-android")</code></pre>
+<pre><code>val analysis = ImageAnalysis.Builder().build()
+analysis.setAnalyzer(executor, GlintAnalyzer(maxDimension = 1280) { detection -&gt;
+  Log.d("glint", "${detection.format} ${detection.value}")
+})</code></pre>
+
+<h2 id="ports">Reader parity</h2>
+<p>The Swift and Kotlin readers are ports of the TypeScript reader, compared with it frame by frame. On the 1,800 frames of the stress run, both returned the same reads as TypeScript, with no differences. Each must also match <code>spec/vectors.json</code> and <code>spec/frames</code>.</p>
+<table>
+<thead><tr><th>Reader</th><th>Median, 960×720</th><th>Measured on</th></tr></thead>
+<tbody>
+<tr><td>Swift</td><td>8.2 ms</td><td>Release build on an Apple Silicon Mac</td></tr>
+<tr><td>Kotlin</td><td>7.5 ms</td><td>JVM 17 on the same Mac, after warm-up</td></tr>
+</tbody>
+</table>
+<p>These timings aren't from phones, and neither port has been measured on a real device yet. The camera helpers were tested with synthetic frames.</p>
+
+<h2 id="printing">Printing</h2>
+<ul>
+<li>Keep a clear margin around the code. The default margin is the minimum.</li>
+<li>In the frame the reader sees, a Capsule should be at least about 32 px tall and a round code at least 60 px wide. Contour needs about 150 px.</li>
+<li>Test on the real material, under the real light, with the phones your users have. The numbers on the home page don't cover print.</li>
+<li>Avoid glossy laminate where you can. Glare hides marks in a way that error correction may not recover.</li>
+</ul>
+
+<h2 id="format">Format</h2>
+<p>6 data bytes and 6 Reed–Solomon parity bytes over GF(256), XORed with a whitening sequence unique to each style. The reader corrects up to 2 bad bytes, or up to 4 when it knows which ones are unsure, and always keeps one parity byte spare. That makes wrong reads rare, not impossible, so reject IDs your server doesn't know.</p>
+<p>The full contract is in <a href="https://github.com/maratmuslimov/glintcode/blob/main/spec/FORMAT.md">spec/FORMAT.md</a>, with conformance data next to it. A new reader passes when it matches <code>spec/vectors.json</code> and <code>spec/frames</code>.</p>
+</article>
+</div>
+<footer><span>glint.codes · MIT licence</span><a href="/">Home</a><a href="https://github.com/maratmuslimov/glintcode">GitHub</a></footer>
+</body>
+</html>

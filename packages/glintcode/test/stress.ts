@@ -1,7 +1,8 @@
 // Stress test on real renders: Chromium draws a code's SVG with CSS 3D tilt, blur and clutter,
 // screenshots it as JPEG, then noise and uneven light are added and the reader runs in Node.
 //   pnpm stress [cases=400] [seed=1] [format=capsule|orbit|…|all]
-// With format "all", also runs the same number of frames with no code in them and counts false reads.
+// With format "all", also runs frames with no code in them (false reads) and clean renders of every
+// format, colour scheme and size, codes filling the frame included: those must always read.
 //   OUT_JSON=<file>  write the summary as JSON (the site's results table comes from it)
 //   CORPUS=<dir>     keep every frame as 8-bit luminance plus a manifest, to compare the Swift and Kotlin readers
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
@@ -83,7 +84,7 @@ function makeCase(format: Format): Case {
   return {
     style: pick(stylesOf(format)),
     value: Math.floor(rnd() * 2 ** 48),
-    height: Math.round(format === "capsule" ? between(22, 160) : between(40, 300)),
+    height: Math.round(format === "capsule" ? between(22, 160) : between(40, 640)),
     rz: between(0, 360),
     rx: between(-55, 55),
     ry: between(-45, 45),
@@ -195,7 +196,7 @@ async function runFormat(pages: Pages, format: Format) {
     bump("all", ok);
     bump(`style ${c.style.name}`, ok);
     if (format === "capsule") bump(`height ${c.height < 32 ? "22-31" : c.height < 48 ? "32-47" : c.height < 80 ? "48-79" : "80-160"}px`, ok);
-    else bump(`size ${c.height < 60 ? "40-59" : c.height < 100 ? "60-99" : c.height < 180 ? "100-179" : "180-300"}px`, ok);
+    else bump(`size ${c.height < 60 ? "40-59" : c.height < 100 ? "60-99" : c.height < 180 ? "100-179" : c.height < 320 ? "180-319" : "320-640"}px`, ok);
     bump(`tilt ${tilt < 20 ? "0-19" : tilt < 35 ? "20-34" : tilt < 45 ? "35-44" : "45-55"}°`, ok);
     bump(`blur ${c.blur === 0 ? "none" : c.blur < 0.8 ? "<0.8px" : "0.8-1.6px"}`, ok);
     if (!ok) failures.push(`#${i} ${c.style.name} h=${c.height} rx=${c.rx.toFixed(0)} ry=${c.ry.toFixed(0)} blur=${c.blur.toFixed(1)} noise=${c.noise.toFixed(0)} q=${c.quality}`);
@@ -231,6 +232,48 @@ async function runNegatives(pages: Pages) {
   return { frames: CASES, falseReads };
 }
 
+const CLEAN_THEMES: { bg: string; capsule: CapsuleOptions; round: RadialOptions }[] = [
+  { bg: "#ffffff", capsule: {}, round: {} },
+  { bg: "#111216", capsule: { pill: "#ffffff", marks: "#111216" }, round: { ink: "#ffffff", paper: "#111216" } },
+  { bg: "#ffffff", capsule: { pill: "#3d46e0" }, round: { lens: "#16171c", rings: ["#2f37a8", "#3d46e0", "#5563ee", "#6877ff"] } },
+  { bg: "#f4efe7", capsule: { pill: "#7a2e1d", marks: "#f4efe7" }, round: { ink: "#2b241c", paper: "#f4efe7", lens: "#7a2e1d" } },
+];
+
+/** Perfect renders of every format and colour scheme, from small to filling the frame. Nothing here should fail. */
+async function runClean({ decoder }: Pages) {
+  const out: { format: Format; frames: number; read: number; wrong: number }[] = [];
+  const perCombo = Math.max(4, Math.round(CASES / 15));
+  for (const format of FORMATS) {
+    let read = 0, wrong = 0, frames = 0;
+    for (const size of [320, 480, 640, 800, 1100, 1280]) {
+      for (const theme of CLEAN_THEMES) {
+        for (let i = 0; i < perCombo; i++) {
+          const value = Math.floor(rnd() * 2 ** 48);
+          const svg = format === "capsule" ? codeSvg("capsule", value, { ...theme.capsule, margin: 0.3 }) : codeSvg(format, value, theme.round);
+          const [b64, w, h] = (await decoder.evaluate(
+            `(async () => {
+              const url = URL.createObjectURL(new Blob([${JSON.stringify(svg)}], { type: "image/svg+xml" }));
+              const img = new Image(); img.src = url; await img.decode();
+              const k = ${size} / Math.max(img.naturalWidth, img.naturalHeight);
+              const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+              const g = c.getContext("2d"); g.fillStyle = ${JSON.stringify(theme.bg)}; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+              const d = g.getImageData(0, 0, c.width, c.height).data; let s = "";
+              for (let k2 = 0; k2 < d.length; k2 += 0x8000) s += String.fromCharCode(...d.subarray(k2, k2 + 0x8000));
+              URL.revokeObjectURL(url); return [btoa(s), c.width, c.height]; })()`,
+          )) as [string, number, number];
+          const found = detect({ data: new Uint8Array(Buffer.from(b64, "base64")), width: w, height: h });
+          frames++;
+          if (found.some((f) => f.value === value && f.format === format)) read++;
+          if (found.some((f) => f.value !== value || f.format !== format)) wrong++;
+        }
+      }
+    }
+    console.log(`clean ${format}: ${read}/${frames} read, ${wrong} wrong`);
+    out.push({ format, frames, read, wrong });
+  }
+  return out;
+}
+
 async function main() {
   const browser = await chromium.launch();
   const pages = {
@@ -241,9 +284,10 @@ async function main() {
   const results = [];
   for (const format of formats) results.push(await runFormat(pages, format));
   const negatives = TARGET === "all" ? await runNegatives(pages) : undefined;
+  const clean = TARGET === "all" ? await runClean(pages) : undefined;
   await browser.close();
   if (process.env.OUT_JSON) {
-    writeFileSync(process.env.OUT_JSON, JSON.stringify({ seed: SEED, width: W, height: H, node: process.version, formats: results, negatives }, null, 2) + "\n");
+    writeFileSync(process.env.OUT_JSON, JSON.stringify({ seed: SEED, width: W, height: H, node: process.version, formats: results, negatives, clean }, null, 2) + "\n");
   }
 }
 

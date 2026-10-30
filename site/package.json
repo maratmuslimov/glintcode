@@ -1,0 +1,20 @@
+{
+  "name": "glint-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "pnpm --filter glintcode build && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.2.0",
+    "@fontsource/ibm-plex-mono": "^5.2.0",
+    "glintcode": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vite": "^7.1.0"
+  }
+}

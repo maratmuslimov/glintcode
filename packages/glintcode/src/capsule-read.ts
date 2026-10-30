@@ -62,7 +62,7 @@ const FAR: Template = [];
 const NEAR_MAX = NEAR.reduce((s, t) => s + t.w, 0);
 const FAR_MAX = FAR.reduce((s, t) => s + t.w, 0);
 
-export function readCapsule(P: Polarity, e: Ellipse): Read | null {
+export function readCapsule(P: Polarity, e: Ellipse, erasures: boolean): Read | null {
   const { sample, cc } = P;
   // Contrast between the disc's clear ring and the capsule around it.
   const base = affineMap(e, 0, DISC_R);
@@ -258,7 +258,7 @@ export function readCapsule(P: Polarity, e: Ellipse): Read | null {
         conf[row][i] = Math.min(1, Math.abs(rel[i] - thr) / thr);
       }
     });
-    const out = decodeCells(cells, conf);
+    const out = decodeCells(cells, erasures ? conf : undefined);
     if (out) {
       const right = RIGHT_CAP + 1;
       const top = map(0, -1), bottom = map(0, 1);

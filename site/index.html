@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glint: scannable codes that look designed</title>
+<meta name="description" content="Five open-source visual codes with one generator and one camera reader. MIT licensed, no dependencies, readers for the web, Swift and Kotlin.">
+<meta property="og:title" content="Glint">
+<meta property="og:description" content="Five scannable visual codes, one reader. MIT licensed.">
+<meta property="og:url" content="https://glint.codes">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script type="module" src="/src/main.ts"></script>
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="/">glint</a>
+  <nav>
+    <a href="#make">Generate</a>
+    <a href="#read">Read</a>
+    <a href="#styles">Styles</a>
+    <a href="#tests">Tests</a>
+    <a href="/docs/">Docs</a>
+    <a href="https://github.com/maratmuslimov/glintcode">GitHub</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow">Open source · MIT · no dependencies</p>
+    <h1>Scannable codes that look designed.</h1>
+    <p class="lede">Glint is five visual codes that share one 48-bit payload, one generator and one camera reader. It runs in the browser, in Swift and in Kotlin.</p>
+    <div class="hero-code" id="hero-code"></div>
+    <div class="actions">
+      <a class="btn primary" href="#read">Scan this code</a>
+      <a class="btn" href="#make">Make your own</a>
+      <code class="install">npm i glintcode</code>
+    </div>
+  </section>
+
+  <section id="make">
+    <div class="head">
+      <p class="eyebrow">Generator</p>
+      <h2>Make a code and check that it reads.</h2>
+      <p>Every change is rendered to pixels and read back by the real reader, in your browser. Nothing is sent anywhere.</p>
+    </div>
+    <div class="bench">
+      <div class="stage" id="stage"><div id="output"></div></div>
+      <form class="tools" id="tools" onsubmit="return false">
+        <div class="field">
+          <span>Style</span>
+          <div class="seg" id="format-seg"></div>
+        </div>
+        <label class="field">
+          <span>Payload, a number below 2<sup>48</sup></span>
+          <span class="row"><input id="value" inputmode="numeric" autocomplete="off" spellcheck="false"><button type="button" class="btn" id="random">Random</button></span>
+        </label>
+        <div class="field">
+          <span>Colours</span>
+          <div class="seg" id="theme-seg"></div>
+        </div>
+        <label class="field">
+          <span id="text-label">Label inside the capsule</span>
+          <input id="text" maxlength="24" autocomplete="off">
+        </label>
+        <p class="check" id="check" role="status"></p>
+        <div class="actions">
+          <button type="button" class="btn primary" id="save-svg">Download SVG</button>
+          <button type="button" class="btn" id="save-png">Download PNG</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section id="read">
+    <div class="head">
+      <p class="eyebrow">Reader</p>
+      <h2>Point a camera at any code on this page.</h2>
+      <p>Open glint.codes on your phone and scan this screen, or a printout. Frames are processed on your device and never leave it.</p>
+    </div>
+    <div class="scanner">
+      <div class="viewfinder" id="viewfinder">
+        <video id="video" playsinline muted></video>
+        <canvas id="overlay"></canvas>
+        <div class="idle" id="idle">
+          <button type="button" class="btn primary" id="camera">Turn on the camera</button>
+          <label class="btn">Read a photo<input type="file" id="photo" accept="image/*" hidden></label>
+        </div>
+      </div>
+      <div class="readout">
+        <p class="eyebrow">Last read</p>
+        <p class="reading" id="reading">Nothing yet</p>
+        <dl id="reading-meta"></dl>
+        <p class="muted" id="reader-note"></p>
+        <button type="button" class="btn" id="stop" hidden>Stop the camera</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="styles">
+    <div class="head">
+      <p class="eyebrow">Styles</p>
+      <h2>Five looks, one codeword.</h2>
+      <p>Each code below carries the same number. Pick the look first, then check its row in the test table.</p>
+    </div>
+    <div class="gallery" id="gallery"></div>
+  </section>
+
+  <section id="tests">
+    <div class="head">
+      <p class="eyebrow">Tests</p>
+      <h2 id="tests-title"></h2>
+      <p id="tests-intro"></p>
+    </div>
+    <div class="table-wrap"><table id="results"></table></div>
+    <div class="notes">
+      <div>
+        <h3>What this measures</h3>
+        <ul id="tests-method"></ul>
+      </div>
+      <div>
+        <h3>What it doesn't</h3>
+        <ul>
+          <li>These are not photos from phones. Frames come from a browser renderer with added damage, so real cameras, glare and print quality are not covered here.</li>
+          <li>Zero wrong reads here doesn't mean they can't happen. When a code is badly damaged, the reader can rely on as little as 16 check bits, so have your server reject IDs it doesn't know.</li>
+          <li>Percentages are for one frame. A live camera gets many frames per second, so a person usually sees better results, but we haven't measured by how much.</li>
+          <li>The table covers the TypeScript reader. The Swift and Kotlin readers are compared with it on the same frames in <a href="/docs/#ports">the docs</a>.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="limits" class="limits">
+    <div class="head">
+      <p class="eyebrow">Before you print a thousand</p>
+      <h2>When to use a QR code instead.</h2>
+    </div>
+    <ul>
+      <li><b>Phone cameras don't know Glint.</b> People need your app, your website or an App Clip. If they will scan with the stock camera, use a QR code or put a small one beside the Glint.</li>
+      <li><b>It holds 6 bytes.</b> That is an ID for your server to look up, not a URL. QR codes can hold the whole link.</li>
+      <li><b>It isn't a standard.</b> Version 1 is one project's format. The spec and the test data are public, but no other scanners read it yet.</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <span>glint.codes · MIT licence</span>
+  <a href="/docs/">Docs</a>
+  <a href="https://github.com/maratmuslimov/glintcode">GitHub</a>
+</footer>
+</body>
+</html>

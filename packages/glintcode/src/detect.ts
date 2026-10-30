@@ -13,7 +13,9 @@ import type { Detection, DetectOptions, Format, Read } from "./types";
  *   give the rotation, then rings are read against per-sector ink and paper levels.
  *
  * Every read ends in Reed–Solomon with one parity byte kept spare, so a candidate that isn't a code
- * (or is misread) is rejected instead of producing a wrong value.
+ * (or is misread) is rejected instead of producing a wrong value. Erasure decoding checks far fewer
+ * bits than plain decoding (16 instead of about 32 and up), and a reader makes many attempts per
+ * candidate, so every format gets a plain attempt before any format may use erasures.
  */
 
 const RADIAL: RadialFormat[] = ["orbit", "constellation", "halo", "contour"];
@@ -27,9 +29,11 @@ export function detect(image: ImageInput, options: DetectOptions = {}): Detectio
   for (const P of passes) {
     for (const e of P.candidates) {
       if (results.some((r) => Math.hypot(r.center[0] / k - e.cx, r.center[1] / k - e.cy) < e.a)) continue;
-      let hit: Read | null = formats.has("capsule") ? readCapsule(P, e) : null;
-      if (!hit && RADIAL.some((f) => formats.has(f)) && radialPrecheck(P, e)) {
-        for (const f of RADIAL) if (!hit && formats.has(f)) hit = readRadial(f, P, e);
+      const round = RADIAL.some((f) => formats.has(f)) && radialPrecheck(P, e);
+      let hit: Read | null = null;
+      for (const erasures of [false, true]) {
+        if (!hit && formats.has("capsule")) hit = readCapsule(P, e, erasures);
+        if (round) for (const f of RADIAL) if (!hit && formats.has(f)) hit = readRadial(f, P, e, erasures);
       }
       if (!hit) continue;
       const s = (p: Point): Point => [p[0] * k, p[1] * k];

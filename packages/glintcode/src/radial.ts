@@ -325,6 +325,8 @@ export function radialSvg(format: RadialFormat, payload: Payload | number | bigi
 // ---------- reading ----------
 
 const SECTORS = 16;
+/** How many different rotations a candidate may be read at. */
+const MAX_ROTATIONS = 8;
 
 /**
  * Cheap test shared by every round format, in lens radii: a solid lens, a paper gap right outside it,
@@ -362,8 +364,9 @@ export function radialPrecheck(P: Polarity, e: Ellipse): boolean {
  * Read a round code around candidate lens `e`. Finds the rotation from the format's fixed points,
  * then reads cells relative to per-sector ink/paper levels; a few small scale corrections are
  * tried when the first read doesn't decode (perspective makes the lens a slightly biased ruler).
+ * `erasures` allows decoding that leans on cell confidence (see detect.ts).
  */
-export function readRadial(format: RadialFormat, P: Polarity, e: Ellipse): Read | null {
+export function readRadial(format: RadialFormat, P: Polarity, e: Ellipse, erasures: boolean): Read | null {
   const spec = SPECS[format];
   const { sample } = P;
   const base = affineMap(e, 0, spec.lens);
@@ -387,8 +390,9 @@ export function readRadial(format: RadialFormat, P: Polarity, e: Ellipse): Read 
   if (inks.filter((v) => v > t).length < SECTORS * 2 - 3) return null;
   if (papers.filter((v) => v < t).length < SECTORS * 2 - 6) return null;
 
-  // Rotation. Soft score: how far each fixed point sits on its expected side of the split. A hard
-  // match count is flat across a few degrees and would leave the rotation at the edge of that plateau.
+  // Rotation. Soft score: how far each fixed point sits on its expected side of the split. On sharp
+  // frames even this saturates into a plateau a few degrees wide, so the search ends by taking the
+  // plateau's middle: its edge is far enough off to misread the outer rings.
   const total = spec.known.reduce((s, k) => s + k.w, 0);
   const tk = paper + (ink - paper) * spec.split;
   const span = (ink - paper) * Math.min(spec.split, 1 - spec.split);
@@ -405,10 +409,16 @@ export function readRadial(format: RadialFormat, P: Polarity, e: Ellipse): Read 
   const coarse: [number, number][] = [];
   for (let d = 0; d < 360; d += 2) coarse.push([score((d / 180) * Math.PI), (d / 180) * Math.PI]);
   coarse.sort((p, q) => q[0] - p[0]);
-  let best = { psi: 0, s: -Infinity };
+  if (coarse[0][0] < total * 0.4) return null;
+  // Every distinct rotation that fits: data can repeat a format's fixed pattern (Halo's four rays turn
+  // up by chance in about one code in six), and only decoding can tell which one is real.
   const deg = Math.PI / 180;
-  for (const [s0, psi0] of coarse.slice(0, 3)) {
-    if (s0 < total * 0.4) break;
+  const picked: number[] = [];
+  const rotations: number[] = [];
+  for (const [s0, psi0] of coarse) {
+    if (rotations.length >= MAX_ROTATIONS || s0 < total * 0.4) break;
+    if (picked.some((p) => Math.abs(((p - psi0 + 3 * Math.PI) % TAU) - Math.PI) < 5 * deg)) continue;
+    picked.push(psi0);
     let local = { psi: psi0, s: s0 };
     for (const [width, step] of [[2, 0.5], [0.5, 0.125]]) {
       const c = local.psi;
@@ -417,34 +427,44 @@ export function readRadial(format: RadialFormat, P: Polarity, e: Ellipse): Read 
         if (s > local.s) local = { psi: c + d * deg, s };
       }
     }
-    if (local.s > best.s) best = local;
+    if (local.s < total * 0.6) continue;
+    const level = local.s - total * 0.01;
+    const edge = (dir: number) => {
+      let d = 0;
+      while (d < 12 && score(local.psi + dir * (d + 0.25) * deg) >= level) d += 0.25;
+      return d;
+    };
+    rotations.push(local.psi + ((edge(1) - edge(-1)) / 2) * deg);
   }
-  if (best.s < total * 0.6) return null;
+  if (!rotations.length) return null;
 
   // Per-sector references (code angle), so uneven light across the code cancels out.
-  const sectorInk = new Float64Array(SECTORS);
-  const sectorPaper = new Float64Array(SECTORS);
-  const rot = affineMap(e, best.psi, spec.lens);
-  for (let s = 0; s < SECTORS; s++) {
-    const vals: number[] = [];
-    const pv: number[] = [];
-    for (let j = 0; j < 4; j++) {
-      const a = ((s + (j + 0.5) / 4) / SECTORS) * TAU;
-      vals.push(at(rot, inkR, a));
-      pv.push(at(rot, spec.paper, a));
+  const views = rotations.map((psi) => {
+    const sectorInk = new Float64Array(SECTORS);
+    const sectorPaper = new Float64Array(SECTORS);
+    const rot = affineMap(e, psi, spec.lens);
+    for (let s = 0; s < SECTORS; s++) {
+      const vals: number[] = [];
+      const pv: number[] = [];
+      for (let j = 0; j < 4; j++) {
+        const a = ((s + (j + 0.5) / 4) / SECTORS) * TAU;
+        vals.push(at(rot, inkR, a));
+        pv.push(at(rot, spec.paper, a));
+      }
+      vals.sort((p, q) => p - q);
+      pv.sort((p, q) => p - q);
+      sectorInk[s] = (vals[1] + vals[2]) / 2;
+      sectorPaper[s] = (pv[1] + pv[2]) / 2;
     }
-    vals.sort((p, q) => p - q);
-    pv.sort((p, q) => p - q);
-    sectorInk[s] = (vals[1] + vals[2]) / 2;
-    sectorPaper[s] = (pv[1] + pv[2]) / 2;
-  }
-  const rel = (v: number, a: number) => {
-    const x = ((a / TAU) * SECTORS - 0.5 + SECTORS) % SECTORS;
-    const s0 = Math.floor(x), u = x - s0, s1 = (s0 + 1) % SECTORS;
-    const i = sectorInk[s0] * (1 - u) + sectorInk[s1] * u;
-    const p = sectorPaper[s0] * (1 - u) + sectorPaper[s1] * u;
-    return (v - p) / Math.max(8, i - p);
-  };
+    const rel = (v: number, a: number) => {
+      const x = ((a / TAU) * SECTORS - 0.5 + SECTORS) % SECTORS;
+      const s0 = Math.floor(x), u = x - s0, s1 = (s0 + 1) % SECTORS;
+      const i = sectorInk[s0] * (1 - u) + sectorInk[s1] * u;
+      const p = sectorPaper[s0] * (1 - u) + sectorPaper[s1] * u;
+      return (v - p) / Math.max(8, i - p);
+    };
+    return { rot, rel };
+  });
 
   // If the plain read fails: small scale corrections, then perspective. x / (1 + p·x) keeps the lens
   // (centre and local scale) as fitted but bends the outer rings the way a tilted view does.
@@ -457,24 +477,29 @@ export function readRadial(format: RadialFormat, P: Polarity, e: Ellipse): Read 
     }
   }
   for (const [scale, px, py] of tries) {
-    const m: Map2 = (x, y) => {
-      const w = 1 + px * x + py * y;
-      return rot((x * scale) / w, (y * scale) / w);
-    };
-    const out = readCells(format, m, (r, a) => rel(at(m, r, a), a));
-    if (!out) continue;
-    const decoded = decodeBits(out.bits, spec.seed, out.conf);
-    if (!decoded) continue;
-    const top = m(0, -1), bottom = m(0, 1);
-    return {
-      format,
-      payload: decoded.payload,
-      value: payloadToNumber(decoded.payload),
-      corrected: decoded.corrected,
-      corners: [m(-1, -1), m(1, -1), m(1, 1), m(-1, 1)],
-      center: m(0, 0),
-      size: Math.hypot(top[0] - bottom[0], top[1] - bottom[1]),
-    };
+    for (const { rot, rel } of views) {
+      const m: Map2 = (x, y) => {
+        const w = 1 + px * x + py * y;
+        return rot((x * scale) / w, (y * scale) / w);
+      };
+      // Contour only: a long run of equal cells looks like drift, so plain views also try a weaker drift model.
+      for (const harmonics of format === "contour" && !px && !py ? [2, 1, 0] : [2]) {
+        const out = readCells(format, m, (r, a) => rel(at(m, r, a), a), harmonics);
+        if (!out) continue;
+        const decoded = decodeBits(out.bits, spec.seed, erasures ? out.conf : undefined);
+        if (!decoded) continue;
+        const top = m(0, -1), bottom = m(0, 1);
+        return {
+          format,
+          payload: decoded.payload,
+          value: payloadToNumber(decoded.payload),
+          corrected: decoded.corrected,
+          corners: [m(-1, -1), m(1, -1), m(1, 1), m(-1, 1)],
+          center: m(0, 0),
+          size: Math.hypot(top[0] - bottom[0], top[1] - bottom[1]),
+        };
+      }
+    }
   }
   return null;
 }
@@ -487,7 +512,7 @@ function binarize(values: number[]) {
   return { bits: values.map((v) => v > thr), conf: values.map((v) => Math.min(1, Math.abs(v - thr) / thr)) };
 }
 
-function readCells(format: RadialFormat, m: Map2, relAt: (r: number, a: number) => number): { bits: boolean[]; conf: number[] } | null {
+function readCells(format: RadialFormat, m: Map2, relAt: (r: number, a: number) => number, harmonics: number): { bits: boolean[]; conf: number[] } | null {
   if (format === "orbit" || format === "constellation") {
     const L = format === "orbit" ? ORBIT : CONSTELLATION;
     // Strokes are thin: take the strongest of three radii, so a ring seen slightly off its radius
@@ -533,10 +558,11 @@ function readCells(format: RadialFormat, m: Map2, relAt: (r: number, a: number) 
       let level = 0;
       while (level < 3 && ratio > HALO_RATIO_SPLIT[level]) level++;
       const edges = [HALO_RATIO_SPLIT[level - 1] ?? -Infinity, HALO_RATIO_SPLIT[level] ?? Infinity];
+      // Most rotations tried are wrong: don't trace the other rays once a fixed one disagrees.
+      if (i < HALO_FIXED.length && level !== HALO_FIXED[i]) return null;
       levels.push(level);
       confs.push(Math.min(1, Math.min(ratio - edges[0], edges[1] - ratio) / 0.08));
     }
-    for (let i = 0; i < HALO_FIXED.length; i++) if (levels[i] !== HALO_FIXED[i]) return null;
     for (let i = HALO_FIXED.length; i < HALO_RAYS; i++) {
       const g = LEVEL_TO_GRAY[levels[i]];
       bits.push(g >= 2, (g & 1) === 1);
@@ -565,7 +591,7 @@ function readCells(format: RadialFormat, m: Map2, relAt: (r: number, a: number) 
     let signal = raw.map(() => 0);
     let trend = raw.map(() => 0);
     for (let iter = 0; iter < 4; iter++) {
-      trend = harmonicFit(raw.map((v, i) => v - signal[i]), ring.n);
+      trend = harmonicFit(raw.map((v, i) => v - signal[i]), ring.n, harmonics);
       signal = raw.map((v, i) => (v - trend[i] > 0 ? CONTOUR_AMP : -CONTOUR_AMP));
     }
     return trend;
@@ -596,18 +622,19 @@ function readCells(format: RadialFormat, m: Map2, relAt: (r: number, a: number) 
   return padOk >= CONTOUR_CELLS.length - CODEWORD_BITS - 2 ? { bits, conf } : null;
 }
 
-/** Least-squares fit of v[i] ≈ c0 + c1·cos θ + s1·sin θ + c2·cos 2θ + s2·sin 2θ at cell angles. */
-function harmonicFit(v: number[], count: number) {
+/** Least-squares fit of v[i] ≈ c0 + c1·cos θ + s1·sin θ + c2·cos 2θ + s2·sin 2θ at cell angles, up to `harmonics`. */
+function harmonicFit(v: number[], count: number, harmonics: number) {
   const basis = (i: number) => {
     const a = ((i + 0.5) / count) * TAU;
     return [1, Math.cos(a), Math.sin(a), Math.cos(2 * a), Math.sin(2 * a)];
   };
   // Cell angles are evenly spaced, so the basis is orthogonal: each coefficient is a projection.
+  const terms = 1 + 2 * harmonics;
   const coef = [0, 0, 0, 0, 0];
   const norm = [count, count / 2, count / 2, count / 2, count / 2];
   for (let i = 0; i < count; i++) {
     const b = basis(i);
-    for (let j = 0; j < 5; j++) coef[j] += (v[i] * b[j]) / norm[j];
+    for (let j = 0; j < terms; j++) coef[j] += (v[i] * b[j]) / norm[j];
   }
   return v.map((_, i) => basis(i).reduce((s, b, j) => s + b * coef[j], 0));
 }

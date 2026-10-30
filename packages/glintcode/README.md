@@ -1,11 +1,11 @@
-# Capsule codes
+# glintcode
 
-Five visual codes that carry the same 48-bit payload, with one generator and one camera reader for all
-of them. TypeScript, no dependencies, about 13 KB gzipped.
+Glint is five visual codes that carry the same 48-bit payload, with one generator and one camera reader
+for all of them. TypeScript, no dependencies, about 13 KB gzipped. Demo and docs: https://glint.codes
 
 | Format | Look |
 |---|---|
-| **capsule** | A pill: round finder, four rows of dots and dashes, and room for human-readable text inside. |
+| **capsule** (Glint Capsule) | A pill: round finder, four rows of dots and dashes, and room for human-readable text inside. |
 | **orbit** | A solid lens with four rings of arcs; the inner ring is the same on every code. |
 | **constellation** | The orbit layout drawn as dots. |
 | **halo** | 52 rays of four lengths around the lens; the first four rays are fixed. |
@@ -16,8 +16,9 @@ of them. TypeScript, no dependencies, about 13 KB gzipped.
 - Payload: 6 bytes (a number below 2^48, or any 6 bytes). Meant to be an ID that a server resolves,
   so what a printed code opens can change after printing.
 - Reed–Solomon over GF(256), 6 data + 6 parity bytes. The reader corrects up to 2 bad bytes, or up to 4
-  when it knows which cells were unsure (erasures), and always keeps one parity byte spare to reject
-  a misread instead of correcting it into another payload.
+  when it knows which cells were unsure (erasures). Every format gets a plain attempt first, and one
+  parity byte always stays spare. This makes wrong reads rare, not impossible: with 4 erasures only 16 bits
+  of checking remain.
 - Each format XORs the codeword with its own whitening sequence: the pattern stays lively for any
   payload, and a code can never decode as another format (or a future version).
 - Bytes sit next to each other on the code (capsule: two columns per byte; round formats: cells
@@ -61,7 +62,7 @@ around it, and data on rings out to radius ~1. Geometry in `src/radial.ts`.
 ## Generate
 
 ```ts
-import { codeSvg, capsuleLayout } from "capsule-code";
+import { codeSvg, capsuleLayout } from "glintcode";
 
 codeSvg("capsule", 123456789, { label: { title: "Maison", subtitle: "Table 12" } });
 codeSvg("capsule", 123456789, { pill: "#ffffff", marks: "#111111" });          // light capsule on a dark card
@@ -85,7 +86,7 @@ Any colours work as long as the marks contrast with what is around them. `capsul
 ## Read
 
 ```ts
-import { detect, detectImage, scanVideo } from "capsule-code";
+import { detect, detectImage, scanVideo } from "glintcode";
 
 detect({ data: imageData.data, width, height });                 // RGBA or 8-bit luminance → Detection[]
 detect(frame, { formats: ["capsule", "orbit"] });                 // only some formats
@@ -104,35 +105,23 @@ each enabled format's reader tries them:
 - capsule (`src/capsule-read.ts`): the start bar next to the disc gives the rotation; start bar, end bar
   and disc fix a homography; 96 cells are sampled with per-row thresholds.
 - round (`src/radial.ts`): a shared precheck (solid lens, paper gap, quiet zone, ink on the data rings)
-  drops most candidates cheaply; fixed points give the rotation (soft score, so it lands in the middle
-  of the match); cells are read against per-sector ink and paper levels; if that fails, small scale and
-  perspective corrections are tried.
-
-Every read ends in Reed–Solomon with a spare parity byte, so a wrong guess is rejected.
+  drops most candidates cheaply; fixed points give the rotation (the middle of the matching range, and
+  every distinct rotation that fits); cells are read against per-sector ink and paper levels; if that
+  fails, small scale and perspective corrections are tried.
 
 ## Tests
 
 ```
-pnpm test                    # Reed–Solomon, codeword round trips per format, software-rendered capsule reads
-pnpm stress 300 11 orbit     # Chromium renders real SVGs with 3D tilt, blur, noise, JPEG and clutter
-pnpm demo                    # http://localhost:8000/demo/camera.html: live camera reader (localhost or https)
+pnpm test                    # Reed–Solomon, codewords, conformance frames from ../../spec
+pnpm stress 300 11 all       # Chromium renders with 3D tilt, blur, noise and JPEG, frames with no code, clean renders
+pnpm vectors                 # regenerate spec/ (only when the format changes)
 ```
 
-Stress results (300 frames per format, 960×720, each frame read once with all formats enabled; seed 11):
-
-| Format | All | Tilt < 20° | Tilt 45–55° | Smallest bucket | Wrong | Median ms |
-|---|---|---|---|---|---|---|
-| capsule | 91.0% | 98.4% | 74.0% | 22–31 px tall: 55.6% | 0 | 35 |
-| orbit | 89.7% | 90.2% | 90.0% | 40–59 px wide: 23.8% | 0 | 34 |
-| constellation | 87.0% | 91.8% | 88.0% | 40–59 px wide: 19.0% | 0 | 41 |
-| halo | 77.3% | 82.0% | 72.0% | 40–59 px wide: 19.0% | 0 | 37 |
-| contour | 54.7% | 72.1% | 42.0% | 40–59 px wide: 0.0% | 0 | 38 |
-
-Time is per 960×720 frame with all five formats and both polarities, in Node on one server core.
+The current numbers are at https://glint.codes/#tests.
 
 ## Limits
 
-- Phone cameras don't read these codes by themselves: they need this reader in an app, a website or an
+- Stock phone cameras don't read these codes: they need this reader in an app, a website or an
   App Clip. Where people scan with the stock camera, pair a code with NFC or a small QR code.
 - Small codes: below ~32 px of capsule height or ~60 px of round diameter in the working frame, marks are
   only a few pixels wide. For small codes in large frames, read at a higher working size (`maxDimension`).

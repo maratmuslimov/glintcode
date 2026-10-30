@@ -136,7 +136,7 @@ function correctErrata(msg: number[], synd: number[], positions: number[]) {
 
 /**
  * Correct a codeword in place of its errors and the given erasures (positions known to be unreliable).
- * Succeeds while 2·errors + erasures ≤ nsym; `maxErrata` can demand spare parity so that
+ * Succeeds while 2·errors + erasures ≤ nsym; `budget` can demand spare parity so that
  * a garbled read is rejected instead of being "corrected" into another valid codeword.
  */
 export function rsDecode(

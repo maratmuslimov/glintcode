@@ -24,11 +24,18 @@ of the state is the next whitening byte.
 | Halo | `halo` | `0x4a10c0de` |
 | Contour | `contour` | `0xc047c0de` |
 
-A code never decodes under another format's seed, and a future version gets new seeds.
+A correctly read code never decodes under another format's seed, and a future version gets new seeds.
 
 Decoders must keep one parity byte spare: 2·errors + erasures ≤ 5. With that budget plain decoding
 corrects 2 bytes. When it fails, retry with the 2 and then the 4 least confident bytes as erasures.
 A candidate that doesn't decode is not a code; there is no partial result.
+
+Erasure decoding leaves as little as 16 bits of checking, and a reader makes many attempts per
+candidate. So for each candidate, every enabled format must get a plain attempt before any format may
+use erasures. Without this order, a code can be read as a different style with a wrong value.
+
+Fixed patterns can repeat in data (Halo's four fixed rays do so in about one code in six), so a reader
+must try every rotation that fits and let decoding decide.
 
 ## Geometry
 
