@@ -186,7 +186,7 @@ export function capsuleSvg(payload: Payload | number | bigint, options: CapsuleO
     const d = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => corner(a, b)).join("");
     body += `<path d="${d}" fill="none" stroke="${glyph}" stroke-width="0.075" stroke-linecap="round"/>`;
   } else if (logo !== "none" && "href" in logo) {
-    const id = `capsule-logo-${++clipIds}`;
+    const id = `glint-logo-${++clipIds}`;
     body += `<clipPath id="${id}"><circle r="${GLYPH_R}"/></clipPath><image href="${esc(logo.href)}" x="${-GLYPH_R}" y="${-GLYPH_R}" width="${GLYPH_R * 2}" height="${GLYPH_R * 2}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${id})"/>`;
   } else if (logo !== "none") {
     body += `<g transform="scale(${GLYPH_R})">${logo.svg}</g>`;
@@ -206,7 +206,7 @@ export function capsuleSvg(payload: Payload | number | bigint, options: CapsuleO
     body += `<text x="${n(c.x)}" y="${n(c.y)}" text-anchor="middle" font-family="${esc(font)}" font-size="${c.size}" fill="${options.captionColor ?? "#6e6e73"}">${esc(c.text)}</text>`;
   }
 
-  const name = options.title ?? (typeof options.label === "string" ? options.label : options.label?.title) ?? "Capsule code";
+  const name = options.title ?? (typeof options.label === "string" ? options.label : options.label?.title) ?? "Glint Capsule";
   const size = options.height ? ` width="${n((vb.width / 2) * options.height)}" height="${n((vb.height / 2) * options.height)}"` : "";
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${n(vb.x)} ${n(vb.y)} ${n(vb.width)} ${n(vb.height)}"${size} role="img" aria-label="${esc(name)}">${body}</svg>`;
 }

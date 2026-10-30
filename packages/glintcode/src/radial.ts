@@ -10,7 +10,7 @@ import type { Format, Read } from "./types";
  * - orbit:          rings of arcs; the inner ring is the same on every code (rotation, validation).
  * - constellation:  the same rings drawn as dots.
  * - halo:           52 rays, each 0–3 segments long (2 bits); the first 4 rays are fixed.
- * - contour:        4 wavy rings; a cell bulging out is 1, in is 0. Three dots inside mark the start.
+ * - contour:        4 wavy rings; a cell bulging out is 1, in is 0. The inner ring breaks at two cells: the start mark.
  */
 
 export type RadialFormat = Exclude<Format, "capsule">;
@@ -304,7 +304,7 @@ export function radialSvg(format: RadialFormat, payload: Payload | number | bigi
     const d = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => corner(a, b)).join("");
     body += `<path d="${d}" fill="none" stroke="${paper}" stroke-width="${n(g * 0.15)}" stroke-linecap="round"/>`;
   } else if (logo !== "none" && "href" in logo) {
-    const id = `code-logo-${++clipIds}`;
+    const id = `glint-logo-r${++clipIds}`;
     body += `<clipPath id="${id}"><circle r="${g}"/></clipPath><image href="${esc(logo.href)}" x="${-g}" y="${-g}" width="${g * 2}" height="${g * 2}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${id})"/>`;
   } else if (logo !== "none") {
     body += `<g transform="scale(${g})">${logo.svg}</g>`;
@@ -319,7 +319,7 @@ export function radialSvg(format: RadialFormat, payload: Payload | number | bigi
   }
   if (options.background) body = `<rect x="${-1 - m}" y="${-1 - m}" width="${2 + 2 * m}" height="${n(height)}" fill="${options.background}"/>` + body;
   const size = options.size ? ` width="${n((options.size * (2 + 2 * m)) / 2)}" height="${n((options.size * height) / 2)}"` : "";
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-1 - m} ${-1 - m} ${2 + 2 * m} ${n(height)}"${size} role="img" aria-label="${esc(options.title ?? options.caption ?? "Code")}">${body}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-1 - m} ${-1 - m} ${2 + 2 * m} ${n(height)}"${size} role="img" aria-label="${esc(options.title ?? options.caption ?? "Glint code")}">${body}</svg>`;
 }
 
 // ---------- reading ----------

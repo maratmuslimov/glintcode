@@ -1,1 +1,9 @@
+node_modules
 dist
+.DS_Store
+.build
+.swiftpm
+.gradle
+build
+.kotlin
+.vercel

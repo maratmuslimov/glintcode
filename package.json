@@ -1,27 +1,10 @@
 {
-  "name": "capsule-code",
-  "version": "0.1.0",
+  "name": "glint-monorepo",
   "private": true,
-  "description": "Capsule codes: five visual codes (capsule, orbit, constellation, halo, contour) with one generator and one camera reader, no dependencies.",
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
+  "packageManager": "pnpm@10.29.3",
   "scripts": {
-    "test": "tsx --test test/*.test.ts",
-    "stress": "tsx test/stress.ts",
-    "typecheck": "tsc --noEmit",
-    "build": "esbuild src/index.ts --bundle --format=esm --minify --outfile=dist/capsule.js && esbuild src/index.ts --bundle --format=iife --global-name=Capsule --minify --outfile=dist/capsule.iife.js",
-    "demo": "pnpm build && esbuild --servedir=. --serve=8000"
-  },
-  "devDependencies": {
-    "@types/node": "^22.20.5",
-    "esbuild": "^0.28.2",
-    "tsx": "^4.23.15",
-    "typescript": "^5"
-  },
-  "files": [
-    "src",
-    "dist"
-  ]
+    "build": "pnpm -r build",
+    "test": "pnpm --filter glintcode test",
+    "typecheck": "pnpm -r typecheck"
+  }
 }

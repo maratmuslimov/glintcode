@@ -1,0 +1,397 @@
+[
+ {
+  "file": "capsule-0.png",
+  "width": 480,
+  "height": 360,
+  "format": "capsule",
+  "value": 176309813182464,
+  "read": [
+   {
+    "format": "capsule",
+    "value": 176309813182464,
+    "corrected": 0,
+    "center": [
+     347.03,
+     118.43
+    ],
+    "size": 58.42,
+    "inverted": false
+   }
+  ]
+ },
+ {
+  "file": "capsule-1.png",
+  "width": 480,
+  "height": 360,
+  "format": "capsule",
+  "value": 32256930676736,
+  "read": [
+   {
+    "format": "capsule",
+    "value": 32256930676736,
+    "corrected": 0,
+    "center": [
+     245.76,
+     310.17
+    ],
+    "size": 61.31,
+    "inverted": true
+   }
+  ]
+ },
+ {
+  "file": "capsule-2.png",
+  "width": 480,
+  "height": 360,
+  "format": "capsule",
+  "value": 103313684955136,
+  "read": [
+   {
+    "format": "capsule",
+    "value": 103313684955136,
+    "corrected": 0,
+    "center": [
+     283.89,
+     281.31
+    ],
+    "size": 53.83,
+    "inverted": true
+   }
+  ]
+ },
+ {
+  "file": "capsule-3.png",
+  "width": 480,
+  "height": 360,
+  "format": "capsule",
+  "value": 238474183311360,
+  "read": [
+   {
+    "format": "capsule",
+    "value": 238474183311360,
+    "corrected": 0,
+    "center": [
+     264.04,
+     54.88
+    ],
+    "size": 37.95,
+    "inverted": false
+   }
+  ]
+ },
+ {
+  "file": "orbit-0.png",
+  "width": 480,
+  "height": 360,
+  "format": "orbit",
+  "value": 119544530141184,
+  "read": [
+   {
+    "format": "orbit",
+    "value": 119544530141184,
+    "corrected": 0,
+    "center": [
+     240.51,
+     180.34
+    ],
+    "size": 164.17,
+    "inverted": true
+   }
+  ]
+ },
+ {
+  "file": "orbit-1.png",
+  "width": 480,
+  "height": 360,
+  "format": "orbit",
+  "value": 275308518113280,
+  "read": [
+   {
+    "format": "orbit",
+    "value": 275308518113280,
+    "corrected": 0,
+    "center": [
+     239.87,
+     180.38
+    ],
+    "size": 164.87,
+    "inverted": false
+   }
+  ]
+ },
+ {
+  "file": "orbit-2.png",
+  "width": 480,
+  "height": 360,
+  "format": "orbit",
+  "value": 150728220147712,
+  "read": []
+ },
+ {
+  "file": "orbit-3.png",
+  "width": 480,
+  "height": 360,
+  "format": "orbit",
+  "value": 99143454490624,
+  "read": [
+   {
+    "format": "orbit",
+    "value": 99143454490624,
+    "corrected": 0,
+    "center": [
+     240.13,
+     180.14
+    ],
+    "size": 217.07,
+    "inverted": true
+   }
+  ]
+ },
+ {
+  "file": "halo-0.png",
+  "width": 480,
+  "height": 360,
+  "format": "halo",
+  "value": 96378748207104,
+  "read": [
+   {
+    "format": "halo",
+    "value": 96378748207104,
+    "corrected": 0,
+    "center": [
+     239.86,
+     179.49
+    ],
+    "size": 225.04,
+    "inverted": true
+   }
+  ]
+ },
+ {
+  "file": "halo-1.png",
+  "width": 480,
+  "height": 360,
+  "format": "halo",
+  "value": 69806188658688,
+  "read": [
+   {
+    "format": "halo",
+    "value": 69806188658688,
+    "corrected": 0,
+    "center": [
+     240.24,
+     180.22
+    ],
+    "size": 164.53,
+    "inverted": false
+   }
+  ]
+ },
+ {
+  "file": "halo-2.png",
+  "width": 480,
+  "height": 360,
+  "format": "halo",
+  "value": 236406727114752,
+  "read": [
+   {
+    "format": "halo",
+    "value": 236406727114752,
+    "corrected": 0,
+    "center": [
+     239.47,
+     179.45
+    ],
+    "size": 188.57,
+    "inverted": true
+   }
+  ]
+ },
+ {
+  "file": "halo-3.png",
+  "width": 480,
+  "height": 360,
+  "format": "halo",
+  "value": 175858456199168,
+  "read": [
+   {
+    "format": "halo",
+    "value": 175858456199168,
+    "corrected": 0,
+    "center": [
+     240.05,
+     179.28
+    ],
+    "size": 196.63,
+    "inverted": true
+   }
+  ]
+ },
+ {
+  "file": "constellation-0.png",
+  "width": 480,
+  "height": 360,
+  "format": "constellation",
+  "value": 199731769180160,
+  "read": [
+   {
+    "format": "constellation",
+    "value": 199731769180160,
+    "corrected": 0,
+    "center": [
+     239.87,
+     180.34
+    ],
+    "size": 166.89,
+    "inverted": true
+   }
+  ]
+ },
+ {
+  "file": "constellation-1.png",
+  "width": 480,
+  "height": 360,
+  "format": "constellation",
+  "value": 138976090849280,
+  "read": [
+   {
+    "format": "constellation",
+    "value": 138976090849280,
+    "corrected": 0,
+    "center": [
+     240.41,
+     179.94
+    ],
+    "size": 184.04,
+    "inverted": false
+   }
+  ]
+ },
+ {
+  "file": "constellation-2.png",
+  "width": 480,
+  "height": 360,
+  "format": "constellation",
+  "value": 224147036962816,
+  "read": [
+   {
+    "format": "constellation",
+    "value": 224147036962816,
+    "corrected": 0,
+    "center": [
+     239.6,
+     179.79
+    ],
+    "size": 140.89,
+    "inverted": true
+   }
+  ]
+ },
+ {
+  "file": "constellation-3.png",
+  "width": 480,
+  "height": 360,
+  "format": "constellation",
+  "value": 21537896857600,
+  "read": [
+   {
+    "format": "constellation",
+    "value": 21537896857600,
+    "corrected": 0,
+    "center": [
+     244.51,
+     171.12
+    ],
+    "size": 137.29,
+    "inverted": true
+   }
+  ]
+ },
+ {
+  "file": "contour-0.png",
+  "width": 480,
+  "height": 360,
+  "format": "contour",
+  "value": 102906250788864,
+  "read": [
+   {
+    "format": "contour",
+    "value": 102906250788864,
+    "corrected": 2,
+    "center": [
+     239.28,
+     179.39
+    ],
+    "size": 225.28,
+    "inverted": true
+   }
+  ]
+ },
+ {
+  "file": "contour-1.png",
+  "width": 480,
+  "height": 360,
+  "format": "contour",
+  "value": 61788997812224,
+  "read": [
+   {
+    "format": "contour",
+    "value": 61788997812224,
+    "corrected": 0,
+    "center": [
+     239.68,
+     179.85
+    ],
+    "size": 152.14,
+    "inverted": false
+   }
+  ]
+ },
+ {
+  "file": "contour-2.png",
+  "width": 480,
+  "height": 360,
+  "format": "contour",
+  "value": 13627825455104,
+  "read": [
+   {
+    "format": "contour",
+    "value": 13627825455104,
+    "corrected": 3,
+    "center": [
+     240.91,
+     179.23
+    ],
+    "size": 214.24,
+    "inverted": true
+   }
+  ]
+ },
+ {
+  "file": "contour-3.png",
+  "width": 480,
+  "height": 360,
+  "format": "contour",
+  "value": 67735746314240,
+  "read": [
+   {
+    "format": "contour",
+    "value": 67735746314240,
+    "corrected": 2,
+    "center": [
+     239.59,
+     179.8
+    ],
+    "size": 147.47,
+    "inverted": true
+   }
+  ]
+ },
+ {
+  "file": "none-0.png",
+  "width": 480,
+  "height": 360,
+  "format": "none",
+  "read": []
+ }
+]
