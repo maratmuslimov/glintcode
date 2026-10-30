@@ -2,6 +2,5 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm --filter glint-site build",
   "outputDirectory": "site/dist",
-  "framework": null,
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- site packages vercel.json"
+  "framework": null
 }
